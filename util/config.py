@@ -1,8 +1,10 @@
 from configparser import ConfigParser
-from os import get_terminal_size
+from os import get_terminal_size, environ
 from sys import exit
 
 import pandas as pd
+import re
+from pathlib import Path
 
 # possible execution environment
 SHELL    = 0
@@ -13,16 +15,43 @@ NOTEBOOK = 2
 class Config:
     DATABASES_CONFIG = "db.ini"
 
-    def __init__(self, filename=DATABASES_CONFIG):
-        self.cp = ConfigParser()
-        self.cp.read(filename)
-        self.filename = filename
+    def __init__(self):
+        pass
 
-    def databases(self) -> dict:
-        if not self.cp.has_section("Databases"):
-            print("help! There is no 'Databases' section in", "'"+self.filename+"'")
-            quit()
-        return dict(self.cp.items("Databases"))
+    @staticmethod
+    def get_database(dbstring: str):
+        tempurl = dbstring
+
+        # is passed string a URL?
+        match = re.match(r"postgresql\+psycopg2:", tempurl)
+
+        if not match:
+            # try default .ini
+            filename = Path(Config.DATABASES_CONFIG)
+            if filename.is_file():
+                # parse .ini
+                cp = ConfigParser()
+                cp.read(filename)
+                if not cp.has_section("Databases"):
+                    print("help! There is no 'Databases' section in", "'"+str(filename)+"'")
+                    quit()
+                di = dict(cp.items("Databases"))
+                # and look for requested alias
+                if dbstring not in di:
+                    print("Help! This is an unknown db alias:")
+                    print(dbstring)
+                    exit(1)
+                else:
+                    tempurl = di[dbstring]
+
+            else:
+                print("Passed db specifications is neither URL or a known db alias? --- "+
+                      Config.DATABASES_CONFIG+" not found!")
+                print(dbstring)
+                exit(1)
+
+#        print("accessing "+tempurl)
+        return tempurl
 
 
 
