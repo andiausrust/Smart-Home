@@ -49,16 +49,16 @@ class DatabaseReader4:
             "    process_events.domain_name,"+
             "    process_events.user_name,"+
             "    process_events.command_line,"+
-            "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name"+
+            "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name,"+
 
-#            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data,"+
+            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data"+
 #            "    network_events.is_connection_outgoing, network_events.protocol_id,"+
 #            "    network_events.local_ip_address, network_events.local_port, network_events.remote_ip_address, network_events.remote_port"+
 
             "  FROM events"+
             "    LEFT OUTER JOIN process_events USING (id)"+
             "    LEFT OUTER JOIN file_events USING (id)"+
-#            "   LEFT OUTER JOIN registry_events USING (id)" +
+            "    LEFT OUTER JOIN registry_events USING (id)" +
 #            "   LEFT OUTER JOIN network_events USING (id)" +
 #            "   LEFT OUTER JOIN thread_events USING (id)" +
             "    LEFT OUTER JOIN events AS parent ON events.parent_id = parent.id"+
@@ -86,22 +86,22 @@ class DatabaseReader4:
             "    process_events.domain_name,"+
             "    process_events.user_name,"+
             "    process_events.command_line,"+
-            "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name"+
+            "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name,"+
 
-#            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data,"+
+            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data"+
 #            "    network_events.is_connection_outgoing, network_events.protocol_id,"+
 #            "    network_events.local_ip_address, network_events.local_port, network_events.remote_ip_address, network_events.remote_port"+
 
             "  FROM events"+
             "    LEFT OUTER JOIN process_events USING (id)"+
             "    LEFT OUTER JOIN file_events USING (id)"+
-#            "   LEFT OUTER JOIN registry_events USING (id)" +
+            "   LEFT OUTER JOIN registry_events USING (id)" +
 #            "   LEFT OUTER JOIN network_events USING (id)" +
 #            "   LEFT OUTER JOIN thread_events USING (id)" +
             "    LEFT OUTER JOIN events AS parent ON events.parent_id = parent.id"+
             "    LEFT OUTER JOIN events AS grant_parent ON parent.parent_id = grant_parent.id"+
-            "  WHERE events.type_id=4 "+     # not process events (!=0),
-                                             # or for faster testing only file events (=4)
+            "  WHERE events.type_id!=0 "+     # not process events (!=0),
+                                              # or for faster testing only file events (=4)
 
             "    AND events.id>="+str(event_from) +
             "    AND events.id<="+str(event_to) +

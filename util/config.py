@@ -40,12 +40,13 @@ class Config:
                 if dbstring not in di:
                     print("Help! This is an unknown db alias:")
                     print(dbstring)
+                    print(di)
                     exit(1)
                 else:
                     tempurl = di[dbstring]
 
             else:
-                print("Passed db specifications is neither URL or a known db alias? --- "+
+                print("Passed db specifications is neither URL or a known db alias? --- " +
                       Config.DATABASES_CONFIG+" not found!")
                 print(dbstring)
                 exit(1)

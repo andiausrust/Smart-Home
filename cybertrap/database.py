@@ -130,5 +130,5 @@ class Database:
             # drop lines(hosts) with no events in database
             df = df.drop( df[df.events == -1].index )
 
-        # df[id,hostname,events], { id -> {'events'-> , 'hostname'-> ) }
+        # df[id,hostname,events], { id -> {'events'-> , 'hostname'-> } }
         return df, df.transpose().to_dict(orient='dict')

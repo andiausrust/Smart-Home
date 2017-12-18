@@ -1,12 +1,13 @@
 from pprint import pprint
 
 from cybertrap.database import Database
-from cybertrap.dbconst import MAX_ID
 from cybertrap.database_reader4 import DatabaseReader4
+
+from r4.cmdtemplate import CommandTemplate
 from util.config import Config
 
 
-class CmdPgStat:
+class CmdPgStat(CommandTemplate):
     NAME = 'pgstat'
     HELP = 'get basic statistics of Cybertrap Postgres database'
 

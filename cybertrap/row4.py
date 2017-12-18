@@ -46,19 +46,22 @@ def row2dict(row):
 #        d[WORKING_DIRECTORY] = str(row[WORKING_DIRECTORY]).lower()
 
     elif type_id == THREAD:
+        ### FIXME -> check first if database schema changed!
         pass
 #        d[TARGET_PID]    = int(row[TARGET_PID])
 #        d[THREAD_ID]     = int(row[THREAD_ID])
 #        d[TRG_PROC_NAME] = str(row[TRG_PROC_NAME]).lower()
 
     elif type_id == NETWORK:
-        d[PROTOCOL_ID]       = int(row[PROTOCOL_ID])
-        d[LOCAL_IP_ADDRESS]  = str(row[LOCAL_IP_ADDRESS])
-        d[LOCAL_PORT]        = int(row[LOCAL_PORT])
-        d[REMOTE_IP_ADDRESS] = str(row[REMOTE_IP_ADDRESS])
-        d[REMOTE_PORT]       = int(row[REMOTE_PORT])
-        d[IS_CONNECTION_OUTGOING] = row[IS_CONNECTION_OUTGOING]
-###        d[EVILNESS]    = bool(EVILNESS)
+        ### FIXME -> check first if database schema changed!
+        pass
+#        d[PROTOCOL_ID]       = int(row[PROTOCOL_ID])
+#        d[LOCAL_IP_ADDRESS]  = str(row[LOCAL_IP_ADDRESS])
+#        d[LOCAL_PORT]        = int(row[LOCAL_PORT])
+#        d[REMOTE_IP_ADDRESS] = str(row[REMOTE_IP_ADDRESS])
+#        d[REMOTE_PORT]       = int(row[REMOTE_PORT])
+#        d[IS_CONNECTION_OUTGOING] = row[IS_CONNECTION_OUTGOING]
+#        d[EVILNESS]    = bool(EVILNESS)
 
     elif type_id == REGISTRY:
         rowtype_string = row[TYPE_STRING]

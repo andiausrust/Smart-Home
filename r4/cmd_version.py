@@ -3,20 +3,19 @@ from util.config import Config, SHELL, IPYTHON, NOTEBOOK
 
 from importlib import import_module
 
-#            print        import
+from r4.cmdtemplate import CommandTemplate
+#            print name   import module name
 VERSION = [("IPython",    "IPython"),
            ("Numpy",      "numpy"),
            ("Pandas",     "pandas"),
            ("SQLAlchemy", "sqlalchemy"),
            ("psycopg2",   "psycopg2"),
            ("matplotlib", "matplotlib"),
-           ("networkx",   "networkx"),
-           ("seaborn",    "seaborn"),
            ("bokeh",      "bokeh"),
            ]
 
 
-class CmdVersion:
+class CmdVersion(CommandTemplate):
     NAME = 'version'
     HELP = 'show runtime library versions'
 

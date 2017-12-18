@@ -10,29 +10,29 @@
 
 from sys import argv
 
-# special case for 'version' command so fewer lib imports are needed
+# special early termination case for 'version' command so fewer lib imports are needed
 from r4.cmd_version import CmdVersion
+
 if len(argv)>1:
     if argv[1]=="version":
         CmdVersion.print_versions()
         exit(0)
 
+#############################################################################
 
-#from r3.cmd_pgrun3 import CmdPgRun3
-#from r3.cmd_pgrun3d import CmdPgRun3d
+# it is not version, so now import other commands
+
 from r4.cmd_pgstat import CmdPgStat
+from r4.cmd_raw import CmdRaw
 
 def add_r4_commands(subparsers):
     CmdVersion.add_subparser(subparsers)
     CmdPgStat.add_subparser(subparsers)
-#    CmdPgRun3.add_subparser(subparsers)
-#    CmdPgRun3d.add_subparser(subparsers)
-
+    CmdRaw.add_subparser(subparsers)
 
 
 import argparse
 from sys import exit
-
 from util.config import Config
 
 
