@@ -100,5 +100,5 @@ DATA =        "data"
 # hostnames
 HOSTNAME = 'hostname'
 
-DUMMY_PROCESS_NAME = r'Dummy Process Event'
-SYSTEM_PROCESS_NAME = r'system'
+DUMMY_PROCESS_NAME = r'Dummy Process Event'.lower()
+SYSTEM_PROCESS_NAME = r'system'.lower()

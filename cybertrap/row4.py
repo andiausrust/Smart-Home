@@ -16,7 +16,9 @@ def row2dict(row):
     else:                     # 2017 format
         d[HOSTNAMES_ID] = int(row[CT_UNITS_ID])
     d[PID]          = int(row[PID])  # only need for stray events pointing to reboot
+
     d[PROCESS_NAME] = str(row[PROCESS_NAME]).lower()
+
     d[TIME]         = row[TIME]
 #    d[TIME].replace(tzinfo=None)
 
@@ -30,11 +32,6 @@ def row2dict(row):
     else:
         d[PARENT_PROCESS_NAME] = str(row[PARENT_PROCESS_NAME]).lower()
     d[SEQUENCE_ID]  = int(row[SEQUENCE_ID])
-
-    if d[PARENT_PROCESS_NAME] == SYSTEM_PROCESS_NAME:
-       d[PARENT_PROCESS_NAME] = r"\SYSTEM"
-    elif d[PARENT_PROCESS_NAME] == DUMMY_PROCESS_NAME:
-        d[PARENT_PROCESS_NAME] = r"\DUMMY_PROCESS_EVENT"
 
     type_id = d[TYPE_ID]
 

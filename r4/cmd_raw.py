@@ -3,6 +3,7 @@ from pprint import pprint
 from cybertrap.database import Database
 from cybertrap.database_reader4 import DatabaseReader4
 from cybertrap.dbconst import *
+from cybertrap.filter import Filter
 from cybertrap.row4 import row2dict
 
 from r4.cmdtemplate import CommandTemplate
@@ -31,7 +32,12 @@ class CmdRaw(CommandTemplate):
 
         parser.add_argument("-proc", dest='print_proc',
                             action='store_true', required=False,
-                            help="print process events")
+                            help="print process")
+
+        parser.add_argument("-parent", dest='print_parent',
+                            action='store_true', required=False,
+                            help="print parent process")
+
 
         parser.add_argument("-cmd", dest='print_cmd',
                             action='store_true', required=False,
@@ -46,6 +52,11 @@ class CmdRaw(CommandTemplate):
                             help="print registry events")
 
 
+        parser.add_argument("-filter", dest='filter',
+                            action='store_true', required=False,
+                            help="apply filtering")
+
+
         parser.add_argument("-quiet", dest='quiet',
                             action='store_true', required=False,
                             help="only print content of events and nothing else")
@@ -55,8 +66,8 @@ class CmdRaw(CommandTemplate):
 
 
     def run(self, db=False, inrange=None, inhost=None,
-            print_proc=False, print_cmd=False, print_file=False, print_reg=False,
-            quiet=False, **kwargs):
+            print_proc=False, print_parent=False, print_cmd=False, print_file=False, print_reg=False,
+            filter=False, quiet=False, **kwargs):
         db = Config.get_database(db)
 
         db = Database(db)
@@ -115,11 +126,16 @@ class CmdRaw(CommandTemplate):
 
                     row = row2dict(rowprox)
 
+                    if filter:
+                        Filter.run_filters(row)
+
                     if row[TYPE_ID] == PROCESS:
                         if print_proc:
                             print("P"+row[PROCESS_NAME])
                         if print_cmd:
                             print("C"+row[COMMAND_LINE])
+                        if print_parent and row[PARENT_PROCESS_NAME]:
+                            print("p"+row[PARENT_PROCESS_NAME])
 
                     elif print_file and row[TYPE_ID] == FILE:
                         print("F"+row[SRC_FILE_NAME])
