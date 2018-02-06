@@ -11,3 +11,7 @@ class CommandTemplate:
     def run(self, args):
         print("error: command has not body to execute")
         quit()
+
+    def print_result(self, result=None):
+        print("error: command has print_result implementation")
+        quit()

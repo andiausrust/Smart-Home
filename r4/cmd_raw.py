@@ -24,7 +24,7 @@ class CmdRaw(CommandTemplate):
                             help="database alias")
 
         parser.add_argument("-r", metavar="num", dest='inrange', nargs=2, required=False,
-                            help="optional: range of first and last event")
+                            help="range of first and last event (optional)")
 
         parser.add_argument("-ho", metavar="hostid", dest='inhost', nargs=1, required=True,
                             help="id of host")
@@ -77,18 +77,18 @@ class CmdRaw(CommandTemplate):
             db.get_db_stat()
 
 
-        # find hostnames with valid events
-        hostdf, hostdict = db.get_hostnames(count_events=False)
-#        print(hostdf)
-#        print(hostdict)
-
-        # is supplied host a valid hosts?
-        hostkey = None
-        if int(inhost[0]) in hostdict:
-            hostkey = inhost[0]
-        else:
-            print(inhost[0], "not in database?")
-            exit(1)
+#         # find hostnames with valid events
+#         hostdf, hostdict = db.get_hostnames(count_events=False)
+# #        print(hostdf)
+# #        print(hostdict)
+#
+#         # is supplied host a valid hosts?
+#         hostkey = None
+#         if int(inhost[0]) in hostdict:
+#             hostkey = inhost[0]
+#         else:
+#             print(inhost[0], "not in database?")
+#             exit(1)
 
         # range
         if not inrange:
@@ -100,7 +100,7 @@ class CmdRaw(CommandTemplate):
 
         if not quiet:
             print("\nprocessing", fromid, "-", toid)
-        dr4 = DatabaseReader4(db, hostkey)
+        dr4 = DatabaseReader4(db, inhost[0])
 
 
         time_start = time.time()

@@ -24,11 +24,13 @@ if len(argv)>1:
 
 from r4.cmd_pgstat import CmdPgStat
 from r4.cmd_raw import CmdRaw
+from r4.cmd_run import CmdRun
 
 def add_r4_commands(subparsers):
     CmdVersion.add_subparser(subparsers)
     CmdPgStat.add_subparser(subparsers)
     CmdRaw.add_subparser(subparsers)
+    CmdRun.add_subparser(subparsers)
 
 
 import argparse

@@ -36,7 +36,6 @@ def row2dict(row):
     type_id = d[TYPE_ID]
 
     if type_id == PROCESS:
-#        d[PARENT_PID]        = int(row[PARENT_PID])
         d[DOMAIN_NAME]       = str(row[DOMAIN_NAME]).lower()
         d[USER_NAME]         = str(row[USER_NAME]).lower()
         d[COMMAND_LINE]      = str(row[COMMAND_LINE]).lower()

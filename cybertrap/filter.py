@@ -36,12 +36,16 @@ class Filter:
     def remove_harddiskvolume(binary_path):
             match = re.match(r"\\Device\\HarddiskVolume(\d*)", binary_path, re.IGNORECASE)
             if match:
-                return match.string[match.end(0):]
+                found = match.string[match.end(0):]
+                if len(found)==0:
+                    return r'\__EMPTY_ACCESS'
+                else:
+                    return found
             else:
                 # src_file_name ILIKE '\\device\\mup%'
                 match = re.match(r"\\Device\\mup", binary_path, re.IGNORECASE)
                 if match:
-                    return 'NO'
+                    return r'\__UNHANDLED'+binary_path
                 else:
                     return binary_path
 
