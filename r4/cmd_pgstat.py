@@ -23,10 +23,15 @@ class CmdPgStat(CommandTemplate):
                             action='store_true', required=False,
                             help="show reboots table")
 
+        parser.add_argument("-sorthost", dest='sort_by_host',     # requested by David :-)
+                            action='store_true', required=False,
+                            help="sort reboots table by hostid (ct_units_id)")
+
+
         parser.set_defaults(cls=CmdPgStat)
 
 
-    def run(self, db=False, print_reboots=False, **kwargs):
+    def run(self, db=False, print_reboots=False, sort_by_host=False, **kwargs):
         db = Config.get_database(db)
 
         db = Database(db)
@@ -39,7 +44,9 @@ class CmdPgStat(CommandTemplate):
 
 
         if print_reboots:
-          dr = DatabaseReader4(db, "")
-          reboots = dr.find_reboots()
-          print("")
-          print(reboots)
+            dr = DatabaseReader4(db, "")
+            reboots = dr.find_reboots()
+            if sort_by_host:
+                reboots.sort_values('ct_units_id',inplace=True)
+            print("")
+            print(reboots)

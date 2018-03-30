@@ -22,6 +22,9 @@ DELETE = 4
 SUPERSEDE    = 5
 WRITE_PAGING = 6
 READ_PAGING  = 7
+MMAP_READ    = 8
+MMAP_READ_WRITE = 9
+MMAP_WRITE   = 10
 
 FILEOP2STR = ['  CRE',
               'READ ',
@@ -30,7 +33,10 @@ FILEOP2STR = ['  CRE',
               '  DEL',
               ' SPS ',
               'WRI_P',
-              'REA_P']
+              'REA_P',
+              'MM_RE',
+              'MM_RW',
+              'MM_WR']
 
 # registry ops
 REG_SET    = 0

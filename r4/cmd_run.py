@@ -8,9 +8,32 @@ from cybertrap.row4 import row2dict
 
 from r4.cmdtemplate import CommandTemplate
 from r4.model_cmp4 import ModelCmp4
+from r4.model_cmp4b import ModelCmp4b
+from r4.modeltemplate import ModelTemplate
 from r4.runsql4 import RunSQL4
 from util.config import Config
 import time
+
+
+
+def getmodel4(thismodel: str) -> ModelTemplate:
+    """ helper method to instantiate model by name """
+    if thismodel == "cmp4":
+        return ModelCmp4
+
+    elif thismodel == "cmp4b":
+        return ModelCmp4b
+
+    elif not thismodel:
+        print("Error! no model specified, choose one of:")
+        print("cmp4")
+        print("cmp4b")
+        exit(1)
+
+    else:
+        print("Error! unknown model: " + thismodel)
+        exit(1)
+
 
 
 class CmdRun(CommandTemplate):
@@ -30,6 +53,8 @@ class CmdRun(CommandTemplate):
         parser.add_argument("-d2", metavar="dbalias", dest='indb2', required=False,
                             help="database2 alias")
 
+        parser.add_argument("-m", metavar="modelname", dest='inmodel', required=False,
+                            help="run with this model")
 
         parser.add_argument("-r1", metavar="num", dest='inrange1', nargs=3, required=False,
                             help="hostid, first, last event")
@@ -73,6 +98,7 @@ class CmdRun(CommandTemplate):
     def run(self, indb1=False, indb2=False,
             inrange1=None, inrange2=None,
             result=None, quiet=False,
+            inmodel=None,
             **kwargs):
 
         # inrange = [hostid, fromid, toid]
@@ -82,8 +108,10 @@ class CmdRun(CommandTemplate):
         dr1 = DatabaseReader4(db1, inrange1[0])
         dr2 = DatabaseReader4(db2, inrange2[0])
 
-        model1 = ModelCmp4(str(inrange1[0]), str(indb1))  # hostid, name
-        model2 = ModelCmp4(str(inrange2[0]), str(indb2))  # hostid, name
+        m1temp = getmodel4(inmodel)
+        model1 = m1temp(str(inrange1[0]), str(indb1), [11,149])  # hostid, name
+        m2temp = getmodel4(inmodel)
+        model2 = m2temp(str(inrange2[0]), str(indb2), [14,36] )  # hostid, name
 
         model1.set_other(model2)
         model2.set_other(model1)

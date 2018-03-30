@@ -84,14 +84,14 @@ class RunSQL4:
 
 
         # find stream with lowest starttime
-        if ev1:
-            timenow = ev1[RELTIME]
-        if ev2:
-            if not ev1:
-                timenow = ev2[RELTIME]
-            else:
-                if ev2[RELTIME] < timenow:
-                    timenow = ev2[RELTIME]
+        # if ev1:
+        #     timenow = ev1[RELTIME]
+        # if ev2:
+        #     if not ev1:
+        #         timenow = ev2[RELTIME]
+        #     else:
+        #         if ev2[RELTIME] < timenow:
+        #             timenow = ev2[RELTIME]
 
 
         time_start = time.time()
@@ -108,7 +108,7 @@ class RunSQL4:
 
             # db1 finished, so do one from db2
             if events_processed1 == events_total1:
-                timenow = ev2[RELTIME]
+#                timenow = ev2[RELTIME]
                 model2.consume_event(ev2)
                 events_processed2 +=1
                 if events_processed2 < events_total2:
@@ -118,7 +118,7 @@ class RunSQL4:
 
             # db2 finished, so do one from db1
             if events_processed2 == events_total2:
-                timenow = ev1[RELTIME]
+#                timenow = ev1[RELTIME]
                 model1.consume_event(ev1)
                 events_processed1 +=1
                 if events_processed1 < events_total1:
@@ -127,14 +127,14 @@ class RunSQL4:
                 continue
 
             if ev1[RELTIME] <= ev2[RELTIME]:
-                timenow = ev1[RELTIME]
+#                timenow = ev1[RELTIME]
                 model1.consume_event(ev1)
                 events_processed1 +=1
                 if events_processed1 < events_total1:
                     ev1 = row2dict(resprox1.fetchone())
                     model1.to_relative_time(ev1)
             else:
-                timenow = ev2[RELTIME]
+#                timenow = ev2[RELTIME]
                 model2.consume_event(ev2)
                 events_processed2 +=1
                 if events_processed2 < events_total2:
@@ -143,7 +143,7 @@ class RunSQL4:
 
         if not quiet:
             print("")
-            print("...last DB1:", printNiceTimeDelta(ev1[RELTIME]), "@", ev1[TIME])
-            print("...last DB2:", printNiceTimeDelta(ev2[RELTIME]), "@", ev2[TIME])
+            print("...last DB1:", ev1[ID], printNiceTimeDelta(ev1[RELTIME]), "@", ev1[TIME])
+            print("...last DB2:", ev2[ID], printNiceTimeDelta(ev2[RELTIME]), "@", ev2[TIME])
             processed = events_processed1+events_processed2
             print("-->", processed, "events", "("+str(int(processed/ (time.time()-time_start))), "events/s)")

@@ -37,9 +37,10 @@ CVIO1 = 132
 CTURQ = 14
 COFFYELLOW = 228
 
-class ModelCmp4(ModelTemplate):
+
+class ModelCmp4b(ModelTemplate):
     def get_modelname(self):
-        return "CMP4"
+        return "CMP4b"
 
     def __init__(self, hostid :str,
                        name   :str,
@@ -94,11 +95,11 @@ class ModelCmp4(ModelTemplate):
 
         same_ident = 0
         same_sym   = 0
-        same_asym_ok  = 0
-        same_asym_uni  = 0
-        fuz_sym  = 0
-        fuz_asym = 0
-        fuz_uni  = 0
+        same_asym  = 0
+        fuz_ident = 0
+        fuz_sym   = 0
+        fuz_asym  = 0
+        unique   = 0
         whatelse = 0
 
         for looppair in self.pairs_same:
@@ -107,48 +108,40 @@ class ModelCmp4(ModelTemplate):
                 same_ident +=1
             elif pair[EVAL_TYPE] == TSAME_SYM:
                 same_sym +=1
-            elif pair[EVAL_TYPE] == TSAME_ASYM_OK:
-                same_asym_ok +=1
-            elif pair[EVAL_TYPE] == TSAME_ASYM_UNI:
-                same_asym_uni +=1
+            elif pair[EVAL_TYPE] == TSAME_ASYM:
+                same_asym +=1
             else:
-                print(pair[PAIR][0],"==>",pair[PAIR][1], " ", pair[LAST_EVENT], pair[EVAL_EVENT], pair[EVAL_TYPE])
+                print("bug? what same type is this?", pair[PAIR][0],"==>",pair[PAIR][1], " ", pair[LAST_EVENT], pair[EVAL_EVENT], pair[EVAL_TYPE])
                 whatelse += 1
 
         for looppair in self.pairs_var:
             pair = self.pairs_var[looppair]
-            if pair[EVAL_TYPE] == TFUZ_SYM:
+            if pair[EVAL_TYPE] == TFUZ_IDENT:
+                fuz_ident +=1
+            elif pair[EVAL_TYPE] == TFUZ_SYM:
                 fuz_sym +=1
             elif pair[EVAL_TYPE] == TFUZ_ASYM:
                 fuz_asym +=1
             elif pair[EVAL_TYPE] == TUNIQUE:
-                fuz_uni +=1
+                unique +=1
 
         result['state_same_ident'] = same_ident
         result['state_same_sym']   = same_sym
-        result['state_same_asym_ok']   = same_asym_ok
-        result['state_same_asym_uni']  = same_asym_uni
+        result['state_same_asym']  = same_asym
 
-#        result['state_var_fuz_sym']  = fuz_sym
-#        result['state_var_fuz_asym'] = fuz_asym
-        result['state_var_uni']  = len(self.pairs_var) #fuz_uni
+        result['state_var_fuz_ident'] = fuz_ident
+        result['state_var_fuz_sym']   = fuz_sym
+        result['state_var_fuz_asym']  = fuz_asym
+        result['state_uni']    =  unique
 
-        all = (same_ident+same_sym+same_asym_ok)+(same_asym_uni+result['state_var_uni'])
+        result['sum_same'] = len(self.pairs_same)
+        result['sum_fuz']  = len(self.pairs_var)
+        all = len(self.pairs_same)+len(self.pairs_var)
+        result['sum_all'] = all
+
         result['percent_100%'] = 1.0
-        result['percent_ok' ]  = (same_ident+same_sym+same_asym_ok) / all
-        result['percent_uni' ] = (same_asym_uni+result['state_var_uni']) / all
-
-        # print(rt.setfg(self.hostcolhi),
-        #       str(len(self.pairs_same)).rjust(2),
-        #       str(len(self.pairs_var)).rjust(2)," ",
-        #
-        #       str(same_ident).rjust(2)+"sI",
-        #       str(same_sym).rjust(2)+"sS",
-        #       str(same_asym_ok).rjust(2)+"sAO", "",
-        #       str(same_asym_uni).rjust(2)+"saI","   ",
-        #       str(len(self.pairs_var)).rjust(2)+"F","  ",
-        #       str(whatelse).rjust(2)+"?",
-        #       rt.resetfg() )
+        result['percent_ok' ]  = (same_ident+same_sym + fuz_ident+fuz_sym) / all
+        result['percent_uni' ] = (same_asym+fuz_asym+unique) / all
 
         return result
 
@@ -229,8 +222,8 @@ class ModelCmp4(ModelTemplate):
             thisdict[key] = 1
 
     @staticmethod
-    def _nilsimsa_distance_(indigest1, indigest2):
-        return (128-compare_digests(indigest1, indigest2))
+    def _nilsimsa_distance_(indigest1, indigest2: Nilsimsa):
+        return (128-compare_digests(indigest1.hexdigest(), indigest2.hexdigest()))
 
 ##############################################################################
 
@@ -276,8 +269,10 @@ class ModelCmp4(ModelTemplate):
                 gpppair = None
                 gpexec = (-1,-1, parent_id,timestamp)
             else:  # find our grandparent
-                gpppair, gpexec = self.find_parent_pair(parent_id, relation[0])
-                if gpppair:
+                result = self.find_parent_pair(parent_id, relation[0])
+                if result:
+                    gpppair, gpexec = result
+                    #if gpppair:
                     grandp_id = gpexec[1]
                 else:
                     grandp_id = -1
@@ -352,7 +347,7 @@ class ModelCmp4(ModelTemplate):
 
         item[FRIEND] = None
         item[EVAL_EVENT] = None
-        item[EVAL_TYPE]  = None
+        item[EVAL_TYPE]  = TUNIQUE
         item[EVAL_STATE] = None
 
         return item
@@ -376,13 +371,12 @@ class ModelCmp4(ModelTemplate):
                 item_other[EVAL_STATE] = None
                 self.other.pairs_same[relation] = item_other
 
-                here_friend = item_other[FRIEND]
-                if here_friend is not None:
-                    # if other had a friend here already, it must be a fuzzy matched friend
-                    # we have to divorce them, same-ness is better
-                    here_friend[FRIEND] = None
-                    print("FIXME! BUG! var has friend!")
-                    exit(1)
+#                 here_friend = item_other[FRIEND]
+#                 if here_friend is not None:
+#                     # if other had a friend here already, it must be a fuzzy matched friend
+#                     # we have to divorce them, as same-ness is better
+#                     print("FIXME! BUG! var has friend!")
+#                     exit(1)
 
                 # forge a stable bond as same friends forever
                 item[FRIEND]       = item_other
@@ -641,111 +635,320 @@ class ModelCmp4(ModelTemplate):
         self.save_state(ev[RELTIME])
 
 
+
+    @staticmethod
+    def is_exename_fuzzy_friend(localpair, testpair) -> bool:
+        # # check for equal number of fragments
+        # if len(localpair[BIN_FRAG]) == len(testpair[BIN_FRAG]) and \
+        #    len(localpair[PAR_TUPL]) == len(testpair[PAR_TUPL]):
+        #
+        #     # total length max difference is <2
+        #     if abs( sum(localpair[PAR_TUPL])-sum(testpair[PAR_TUPL]) )<2 and \
+        #        abs( sum(localpair[BIN_TUPL])-sum(testpair[BIN_TUPL]) )<2:
+
+        # check for identical fragments+size    (_CUT for ignore size of last fragment (exe))
+        if  localpair[PAR_TUPL] == testpair[PAR_TUPL] and \
+            localpair[BIN_TUPL] == testpair[BIN_TUPL]:
+
+                # find number and location of differing frags
+                index_different_par_frags=[]
+                index_different_bin_frags=[]
+
+                for index in range(len(localpair[PAR_TUPL])):
+                    if localpair[PAR_FRAG][index]!=testpair[PAR_FRAG][index]:
+                        index_different_par_frags.append(index)
+#                        if abs( len(localpair[PAR_FRAG][index]) - len(testpair[PAR_FRAG][index]))<2:
+#                            index_different_par_frags.append(index)
+#                        else:
+#                            return False   # one frag sizeably different
+
+                for index in range(len(localpair[BIN_TUPL])):
+                    if localpair[BIN_FRAG][index]!=testpair[BIN_FRAG][index]:
+                        index_different_bin_frags.append(index)
+#                        if abs( len(localpair[BIN_FRAG][index]) - len(testpair[BIN_FRAG][index]))<2:
+#                            index_different_bin_frags.append(index)
+#                        else:
+#                            return False   # one frag sizeably different
+
+                # max 2 different fragments allowed
+                if len(index_different_par_frags)<3 and len(index_different_bin_frags)<3:
+                    itsok = True
+
+                    # a parent with only one frag is only sanely a REBOOT, SYSTEM or DUMMY,
+                    # so this single frag must be identical
+                    if len(localpair[PAR_TUPL])==1 and \
+                                   localpair[PAR_TUPL][0] != testpair[PAR_TUPL][0]:
+                        itsok = False
+
+                    # last fragment (=exe name) must be one different fragment when two fragments differ
+                    lastindexp = len(localpair[PAR_FRAG])-1
+                    if len(index_different_par_frags)==2:
+                        if index_different_par_frags[-1]==lastindexp:
+                            pass
+                        else:
+                            itsok = False
+
+                    lastindexb = len(localpair[BIN_FRAG])-1
+                    if len(index_different_bin_frags)==2:
+                        if index_different_bin_frags[-1]==lastindexb:
+                            pass
+                        else:
+                            itsok = False
+
+    #                print("1 :",localpair[PAIR], itsok, len(index_different_par_frags), index_different_par_frags)
+    #                print(" 2:",testpair[PAIR], itsok, len(index_different_bin_frags), index_different_bin_frags)
+
+
+                    if itsok is True:
+#                        if len(index_different_bin_frags)>0:
+#                         if len(index_different_bin_frags)==2 or len(index_different_par_frags)==2:
+#                             print("sea:", localpair[PAIR][0], " ===> ", localpair[PAIR][1] )
+#                             print("  ?:", testpair[PAIR][0], " ===> ", testpair[PAIR][1],
+#                                   index_different_par_frags, lastindexp, "-",
+#                                   index_different_bin_frags, lastindexb, )
+                        return True
+                    else:
+                        return False
+        return False
+
+
+
     def eval_same(self):
         for looppair in self.pairs_same:
             pair = self.pairs_same[looppair]
             friend = pair[FRIEND]
 
-            # only if new event consumed since last evaluation
-            if    (pair[LAST_EVENT] != pair[EVAL_EVENT]) or \
-                (friend[LAST_EVENT] != friend[EVAL_EVENT]):
-#            if    (pair[LAST_EVENT] != pair[EVAL_EVENT]) or (pair[EVAL_TYPE] is None) or \
-#                (friend[LAST_EVENT] != friend[EVAL_EVENT]) or (friend[EVAL_TYPE] is None):
+            if friend is None:
+                print("bug! same has None friend!")
+                print(pair[PAIR])
+                exit(1)
 
-                self.eval_same_pair(pair)
+            needs_reevaluation = False
+
+            if pair[LAST_EVENT] != pair[EVAL_EVENT]:
+                ModelCmp4b.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
+                needs_reevaluation = True
+
+            if friend[LAST_EVENT] != friend[EVAL_EVENT]:
+                ModelCmp4b.calc_one_nilsimsa(friend[MYDIR_PREFIX], friend[MYDIR_PRENIL], friend[BIN_TUPL])
+                needs_reevaluation = True
+
+            if needs_reevaluation:
+                result = ModelCmp4b.eval_one_pair(pair, friend)
+                pair[EVAL_STATE] = result
+
+                if result[0] == 0:
+                    if result[1]==0:
+                        pair[EVAL_TYPE] = TSAME_IDENT
+                    else:
+                        pair[EVAL_TYPE] = TSAME_SYM
+                else:
+                    pair[EVAL_TYPE] = TSAME_ASYM
+#
+                pair[EVAL_EVENT] = pair[LAST_EVENT]
+                 # don't update friend[EVAL_EVENT] here, this is done from the other side
 
 
     def eval_var(self):
         for looppair in self.pairs_var:
             pair = self.pairs_var[looppair]
 
-            # only if new event consumed since last evaluation
             if pair[LAST_EVENT] != pair[EVAL_EVENT]:
-                # FIXME
-                ModelCmp4.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
+                ModelCmp4b.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
                 pair[EVAL_EVENT] = pair[LAST_EVENT]
+
+            result = None
+            friend = None
+            tyype  = None
+
+            for otherpair in self.other.pairs_var:
+                testfriend = self.other.pairs_var[otherpair]
+
+                if ModelCmp4b.is_exename_fuzzy_friend(pair, testfriend):
+                    if testfriend[LAST_EVENT] != testfriend[EVAL_EVENT]:
+                        ModelCmp4b.calc_one_nilsimsa(testfriend[MYDIR_PREFIX], testfriend[MYDIR_PRENIL], testfriend[BIN_TUPL])
+                        testfriend[EVAL_EVENT] = testfriend[LAST_EVENT]
+
+                    newresult = ModelCmp4b.eval_one_pair(pair, testfriend)
+                    newfriend = testfriend
+
+                    if newresult[0] == 0:
+                        if newresult[1]==0:
+                            newtyype = TFUZ_IDENT
+                        else:
+                            newtyype = TFUZ_SYM
+                    else:
+                        # no fuzzy match if mismatched prefixes == number of prefixes, that's a crap match
+                        if newresult[0]==len(pair[MYDIR_PREFIX]):
+                            continue
+                        else:
+                            newtyype = TFUZ_ASYM
+
+                    if result:
+                        if newresult[0]>result[0]:  # more prefixes wrong than best result
+                            continue
+
+                        if newresult[0]<result[0]:  # less, so surely better, take it
+                            result = newresult
+                            friend = newfriend
+                            tyype = newtyype
+                            continue
+
+                        if newresult[1]<result[1]:  # same prefixes, but less hash distance
+                            result = newresult
+                            friend = newfriend
+                            tyype = newtyype
+
+                    else:   # first result ever -> take it
+                        result = newresult
+                        friend = newfriend
+                        tyype = newtyype
+
+            if result:  # one fuzzy friend was found
+                pair[EVAL_STATE] = result
+                pair[EVAL_TYPE] = tyype
+                pair[FRIEND] = friend
+            else:       # we are alone :-(
+                pair[EVAL_STATE] = None
+                pair[EVAL_TYPE] = TUNIQUE
+                pair[FRIEND] = None
 
 
 
     @staticmethod
-    def eval_prefixes(inpair:dict, infriend:dict) -> tuple:
+    def common_tuple_prefix_with1random(a,b):
+        i=0
+        while i<len(a) and i<len(b) and a[i]==b[i]:
+            i+=1
+        if i<len(a) and i<len(b):
+            if len(a[i])==len(b[i]):    # one random element of same length allowed
+                wascutoff = i
+                i+=1
+                while i<len(a) and i<len(b) and a[i]==b[i]:  # try others
+                    i+=1
+                return a[:i],b[:i]
+    #            if i>wascutoff+1:  # alternatively: only accept longer if one same beyond random element
+    #                return a[:i],b[:i]
+    #            else:
+    #                return a[:wascutoff],b[:wascutoff]
+            else:
+                return a[:i],b[:i]
+        else:
+            return a[:i],b[:i]
+
+
+
+    @staticmethod
+    def eval_prefixes(inpair, infriend):
+        mypre = sorted(inpair[MYDIR_PREFIX])
+        frpre = sorted(infriend[MYDIR_PREFIX])
+
         missing_prefixes = 0   # number of
         total_dist = 0         # sum of all hash distances
         result = {}
-        for testprefix in sorted(inpair[MYDIR_PREFIX]):
-            if testprefix in infriend[MYDIR_PREFIX]:
-                dist = ModelCmp4._nilsimsa_distance_(inpair[MYDIR_PRENIL][testprefix].hexdigest(),
-                                                   infriend[MYDIR_PRENIL][testprefix].hexdigest())
-                result[testprefix] = (testprefix, testprefix, dist)
-                total_dist += dist
+
+        while len(mypre)>0 or len(frpre)>0:
+            val = None
+
+            if len(mypre)==0:
+                if len(frpre)>0:
+                    val = frpre.pop(0)
+#                    print("LONELY2", val)
+                    continue
+                else: # both empty
+                    break
             else:
-                # no direct match, maybe via uplifting or approximate matching?
-                matchprefix = None
-
-                for otherprefix in infriend[MYDIR_PREFIX]:
-                    matchprefix = ModelCmp4.common_tuple_prefix(testprefix, otherprefix)
-                    if matchprefix:
-                        break
-
-                if matchprefix:
-                    result[testprefix] = (testprefix, matchprefix, -1)
-                else:
+                if len(frpre)==0:
+                    val = mypre.pop(0)
+#                    print("LONELY1", val)
                     missing_prefixes += 1
-                    result[testprefix] = None
+                    continue
+                else:
+                    if mypre[0]<frpre[0]:
+                        if mypre[0][0] != frpre[0][0]:
+                            val = mypre.pop(0)
+#                            print("LONELY1", val)
+                            missing_prefixes += 1
+                            continue
+                    else:
+                        if mypre[0][0] != frpre[0][0]:
+                            val = frpre.pop(0)
+#                            print("LONELY2", val)
+                            continue
+
+
+            myprefix  = mypre.pop(0)
+            friprefix = frpre.pop(0)
+            distpre = ModelCmp4b._nilsimsa_distance_( inpair[MYDIR_PRENIL][myprefix],
+                                                    infriend[MYDIR_PRENIL][friprefix] )
+
+            if myprefix == friprefix:   # identical prefix, that's easy
+                result[myprefix] = (myprefix, myprefix, distpre, None, None, distpre)
+                total_dist += distpre
+
+            else:   # find common prefix first
+#                print("C1  ", myprefix)
+#                print("C2  ", friprefix)
+                common1, common2 = ModelCmp4b.common_tuple_prefix_with1random(myprefix, friprefix)
+#                print("--->", common1, "", common2)
+
+                if len(common1)<len(myprefix):
+#                    print(" MINE   ")
+
+                    locstore = {}
+                    locstore[myprefix] = deepcopy(inpair[MYDIR_PREFIX][myprefix])
+                    ModelCmp4b.add_prefix(locstore, common1)
+                    ModelCmp4b.decrease_prefix(locstore, common1)
+                    newmyprefix = common1
+                    newmynil = ModelCmp4b.calc_one_nilsimsa_for_one_prefix(common1, locstore[common1], inpair[BIN_TUPL])
+                else:
+                    newmyprefix = myprefix
+                    newmynil = inpair[MYDIR_PRENIL][myprefix]
+
+
+                if len(common2)<len(friprefix):
+#                    print("  FRIEND")
+
+                    locstore = {}
+                    locstore[friprefix] = deepcopy(infriend[MYDIR_PREFIX][friprefix])
+                    ModelCmp4b.add_prefix(locstore, common2)
+                    ModelCmp4b.decrease_prefix(locstore, common2)
+                    newfriprefix = common2
+                    newfrinil = ModelCmp4b.calc_one_nilsimsa_for_one_prefix(common2, locstore[common2], infriend[BIN_TUPL])
+
+                else:
+                    newfriprefix = friprefix
+                    newfrinil = infriend[MYDIR_PRENIL][friprefix]
+
+                distpost = ModelCmp4b._nilsimsa_distance_( newmynil, newfrinil)
+                total_dist += distpost
+
+                result[myprefix] = (myprefix, friprefix,     distpre,
+                                 newmyprefix, newfriprefix,  distpost)
+#                print("##", distpre, "-->", distpost)
+#                print("")
+
+#            result[myprefix] = (myprefix, myprefix, 99)
+
 
         return (missing_prefixes, total_dist, result)
 
 
-    def eval_same_pair(self, pair):
-            friend = pair[FRIEND]
 
-            if pair[LAST_EVENT] != pair[EVAL_EVENT]:
-                ModelCmp4.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
+    @staticmethod
+    def eval_one_pair(inpair, infriend):
 
-            if friend[LAST_EVENT] != friend[EVAL_EVENT]:
-                ModelCmp4.calc_one_nilsimsa(friend[MYDIR_PREFIX], friend[MYDIR_PRENIL], friend[BIN_TUPL])
+        # same number of prefixes
+        if len(inpair[MYDIR_PREFIX]) == len(infriend[MYDIR_PREFIX]):
+            myhashes    = set(inpair[MYDIR_PRENIL].values())
+            otherhashes = set(infriend[MYDIR_PRENIL].values())
+            # and hashes identical
+            if myhashes == otherhashes:
+                return (0,0, None)      # we are IDENT
 
-            myprefixes = set(sorted(pair[MYDIR_PREFIX]))
-            otherprefixes = set(sorted(friend[MYDIR_PREFIX]))
-            myuniqueprefixes = myprefixes - otherprefixes
-#            sharedprefixes = set(myprefixes) & set(otherprefixes)
-#            uniqueprefixes = set(myprefixes) ^ set(otherprefixes)
+        result = ModelCmp4b.eval_prefixes(inpair, infriend)
+        return result
 
-            if len(myuniqueprefixes)==0:
-                myhashes    = set(pair[MYDIR_PRENIL].values())
-                otherhashes = set(friend[MYDIR_PRENIL].values())
-                if myhashes == otherhashes:           # hashes identical
-                    pair[EVAL_TYPE] = TSAME_IDENT
-                    pair[EVAL_STATE] = (0,0, None)
-
-                else:   # hashes have some distance
-                    total_dist = 0
-                    result = {}
-
-                    for thisprefix in pair[MYDIR_PREFIX]:
-                        dist = ModelCmp4._nilsimsa_distance_(
-                            pair  [MYDIR_PRENIL][thisprefix].hexdigest(),
-                            friend[MYDIR_PRENIL][thisprefix].hexdigest() )
-                        result[thisprefix] = (thisprefix, thisprefix, dist)
-                        total_dist += dist
-
-                    pair[EVAL_TYPE] = TSAME_SYM
-                    pair[EVAL_STATE] = (0, total_dist, result)
-            else:  # I have unique prefixes
-                result = self.eval_prefixes(pair, friend)
-                pair[EVAL_STATE] = result
-                if result[0]>0:
-                    pair[EVAL_TYPE] = TSAME_ASYM_UNI
-                else:
-                    pair[EVAL_TYPE] = TSAME_ASYM_OK
-
-            pair[EVAL_EVENT] = pair[LAST_EVENT]
-            # don't update friend[EVAL_EVENT] here, this is done from the other side
-
-
-    # re-evaluate all friendships of "not same" pairs
-    def check_friendships(self):
-        pass
 
 ##############################################################################
 
@@ -759,8 +962,8 @@ class ModelCmp4(ModelTemplate):
         if result == 0:
             print("supported results:")
             print("21 - unique prefix dirs per host")
-            print("30 - raw dump of all prefixes and hashes")
-            print("40 - r4 matcher by end of run evaluation")
+#            print("30 - raw dump of all prefixes and hashes")
+#            print("40 - r4 matcher by end of run evaluation")
             print("50 - r4 matcher by periodic tick evaluation")
             pass
 
@@ -772,12 +975,12 @@ class ModelCmp4(ModelTemplate):
 
         elif result == 21:
             alldirs = {}
-            max1 = ModelCmp4.addup_root_dirs(alldirs, self.pairs_same)
-            max2 = ModelCmp4.addup_root_dirs(alldirs, self.pairs_var)
+            max1 = ModelCmp4b.addup_root_dirs(alldirs, self.pairs_same)
+            max2 = ModelCmp4b.addup_root_dirs(alldirs, self.pairs_var)
 
             otherdirs = {}
-            max3 = ModelCmp4.addup_root_dirs(otherdirs, self.other.pairs_same)
-            max4 = ModelCmp4.addup_root_dirs(otherdirs, self.other.pairs_var)
+            max3 = ModelCmp4b.addup_root_dirs(otherdirs, self.other.pairs_same)
+            max4 = ModelCmp4b.addup_root_dirs(otherdirs, self.other.pairs_var)
 
 
             for prefixkey in sorted(alldirs):
@@ -795,29 +998,31 @@ class ModelCmp4(ModelTemplate):
 
         elif result == 30:
             alldirs = {}
-            max1 = ModelCmp4.addup_root_dirs(alldirs, self.pairs_same)
-            max2 = ModelCmp4.addup_root_dirs(alldirs, self.pairs_var)
+            max1 = ModelCmp4b.addup_root_dirs(alldirs, self.pairs_same)
+            max2 = ModelCmp4b.addup_root_dirs(alldirs, self.pairs_var)
 
             otherdirs = {}
-            max3 = ModelCmp4.addup_root_dirs(otherdirs, self.other.pairs_same)
-            max4 = ModelCmp4.addup_root_dirs(otherdirs, self.other.pairs_var)
+            max3 = ModelCmp4b.addup_root_dirs(otherdirs, self.other.pairs_same)
+            max4 = ModelCmp4b.addup_root_dirs(otherdirs, self.other.pairs_var)
 
             print("   ||| SAME |||")
-            ModelCmp4.dump_prefix_and_nil(self.pairs_same)
+            ModelCmp4b.dump_prefix_and_nil(self.pairs_same)
             print("   ||| VAR |||")
-            ModelCmp4.dump_prefix_and_nil(self.pairs_var)
+            ModelCmp4b.dump_prefix_and_nil(self.pairs_var)
 
 
         elif result == 40:
-            ModelCmp4.dump_current_matching(self.pairs_same, self.pairs_var)
+            ModelCmp4b.dump_current_matching_old(self.pairs_same, self.pairs_var)
 
 
         elif result >=50 and result <=59:
             self.eval_same()
-            self.eval_var()   # FIXME
+            self.eval_var()
+            self.other.eval_same()
+            self.other.eval_var()
 
-            ModelCmp4.dump_current_states(self.pairs_same, self.pairs_var, self.reboots)
-
+            ModelCmp4b.dump_current_states(self.pairs_same, self.pairs_var, self.reboots)
+            print("")
 
 
 ##############################################################################
@@ -831,13 +1036,12 @@ class ModelCmp4(ModelTemplate):
             if len(p[MYDIR_PREFIX]) > max_prefixes:
                 max_prefixes = len(p[MYDIR_PREFIX])
             for prefixkey in p[MYDIR_PREFIX]:
-                ModelCmp4._add_one_to_key_(allprefix, prefixkey)
+                ModelCmp4b._add_one_to_key_(allprefix, prefixkey)
         return max_prefixes
 
 
-
     @staticmethod
-    def calc_one_nilsimsa_for_one_prefix(prefix: tuple, prefixdata:dict, bintupl:dict):
+    def calc_one_nilsimsa_for_one_prefix(prefix: tuple, prefixdata:dict, bintupl:dict) -> Nilsimsa:
         n = Nilsimsa()
 
         n.process("\\"+"\\".join(prefix) )             # prefix in text
@@ -860,7 +1064,7 @@ class ModelCmp4(ModelTemplate):
     def calc_one_nilsimsa(inprefixes:dict, nilstore:dict, bintupl:dict):
             nilstore.clear()
             for prefix in inprefixes:
-                n = ModelCmp4.calc_one_nilsimsa_for_one_prefix(prefix, inprefixes[prefix], bintupl)
+                n = ModelCmp4b.calc_one_nilsimsa_for_one_prefix(prefix, inprefixes[prefix], bintupl)
                 nilstore[prefix] = n
 
 
@@ -872,7 +1076,7 @@ class ModelCmp4(ModelTemplate):
             print(rt.setfg(CVIO3), pair[PAIR][0], rt.setfg(CNORM), "===>",
                   rt.setfg(CVIO3), pair[PAIR][1], rt.resetfg())
 
-            ModelCmp4.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
+            ModelCmp4b.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
             myprefixes = sorted(pair[MYDIR_PREFIX])
             friend = pair[FRIEND]
 
@@ -881,7 +1085,7 @@ class ModelCmp4(ModelTemplate):
             uniqueprefixes = {}
 
             if friend:
-                ModelCmp4.calc_one_nilsimsa(friend[MYDIR_PREFIX], friend[MYDIR_PRENIL], friend[BIN_TUPL])
+                ModelCmp4b.calc_one_nilsimsa(friend[MYDIR_PREFIX], friend[MYDIR_PRENIL], friend[BIN_TUPL])
                 otherprefixes = sorted(friend[MYDIR_PREFIX])
                 sharedprefixes = set(myprefixes) & set(otherprefixes)
                 uniqueprefixes = set(myprefixes) ^ set(otherprefixes)
@@ -893,7 +1097,7 @@ class ModelCmp4(ModelTemplate):
                 #                                   friend[MYDIR_PRENIL][prefixkey].hexdigest()) ).rjust(3)
                 # else:
                 #     if friend:
-                #         match = ModelCmp4.find_me_a_nil_friend(pair[MYDIR_PREFIX], friend[MYDIR_PREFIX],
+                #         match = ModelCmp4b.find_me_a_nil_friend(pair[MYDIR_PREFIX], friend[MYDIR_PREFIX],
                 #                                                  prefixkey,
                 #                                                 pair[MYDIR_PRENIL], friend[MYDIR_PRENIL],
                 #                                                 pair[BIN_TUPL], friend[BIN_TUPL])
@@ -914,7 +1118,7 @@ class ModelCmp4(ModelTemplate):
 
 
     @staticmethod
-    def dump_current_matching(inpairs_same, inpairs_var):
+    def dump_current_matching_old(inpairs_same, inpairs_var):
         print("   <<< SAME >>>")
 
         same_ident = []
@@ -925,11 +1129,11 @@ class ModelCmp4(ModelTemplate):
             pair = inpairs_same[looppair]
             friend = pair[FRIEND]
 
-            ModelCmp4.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
+            ModelCmp4b.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
             myprefixes = set(sorted(pair[MYDIR_PREFIX]))
 
 #            if friend:  # here always true for same
-            ModelCmp4.calc_one_nilsimsa(friend[MYDIR_PREFIX], friend[MYDIR_PRENIL], friend[BIN_TUPL])
+            ModelCmp4b.calc_one_nilsimsa(friend[MYDIR_PREFIX], friend[MYDIR_PRENIL], friend[BIN_TUPL])
             otherprefixes = set(sorted(friend[MYDIR_PREFIX]))
             sharedprefixes = set(myprefixes) & set(otherprefixes)
             uniqueprefixes = set(myprefixes) ^ set(otherprefixes)
@@ -1024,7 +1228,7 @@ class ModelCmp4(ModelTemplate):
                             dist = '???'
 
                             # [wasprefix, isprefix, newdist]
-                            match = ModelCmp4.find_me_a_nil_friend(pair[MYDIR_PREFIX], friend[MYDIR_PREFIX],
+                            match = ModelCmp4b.find_me_a_nil_friend(pair[MYDIR_PREFIX], friend[MYDIR_PREFIX],
                                                                        prefixkey,
                                                                        pair[MYDIR_PRENIL], friend[MYDIR_PRENIL],
                                                                        pair[BIN_TUPL], friend[BIN_TUPL])
@@ -1059,61 +1263,52 @@ class ModelCmp4(ModelTemplate):
     @staticmethod
     def print_prefixes(inpair):
         pair = inpair
-#        friend = pair[FRIEND]
-        myprefixes = set(pair[MYDIR_PREFIX])
 
-        s = pair[EVAL_STATE]
-
-        if s and (s[2] is not None):
-            for prefixkey in s[2]:
-                if s[2][prefixkey]:
-                    col = CLIGHTGREEN
-                    dist = s[2][prefixkey][2]    # dist calculated
-                    if dist==0:
-                        distcol=CLIGHTGREEN
-                    else:
-                        distcol=CDARKGREEN
-                    dist = str(dist).rjust(3)
-
-                else:
-                    col = CLIGHTRED
-                    dist = "---"
-                    distcol = CLIGHTRED
-
-                nils = pair[MYDIR_PRENIL][prefixkey]
-
-                tupl_count = 0
-                for tupl in pair[MYDIR_PREFIX][prefixkey]:
-                    tupl_count += pair[MYDIR_PREFIX][prefixkey][tupl]
-
-                print("     ",
-                      rt.setfg(CDARK), nils,
-                      rt.setfg(distcol), dist,
-                      rt.setfg(col), "  \\"+"\\".join(prefixkey),
-                      rt.setfg(CDARK), " x"+str(tupl_count), rt.resetfg() )
-
+        if pair[EVAL_STATE]:
+            estate = pair[EVAL_STATE][2]
         else:
-            for prefixkey in myprefixes:
-                col = CNORM
-                dist = "???"
-                tupl_count = 0
-                if prefixkey in pair[MYDIR_PRENIL]:
-                    nils = pair[MYDIR_PRENIL][prefixkey]
-                    for tupl in pair[MYDIR_PREFIX][prefixkey]:
-                        tupl_count += pair[MYDIR_PREFIX][prefixkey][tupl]
+            estate = None
+
+        for prefixkey in sorted(pair[MYDIR_PREFIX]):
+            uplift = " "
+            path = "\\".join(prefixkey)
+            pathuplift =""
+            if estate and prefixkey in estate:
+                col = CLIGHTGREEN
+
+                dist = estate[prefixkey][2+3]    # dist calculated
+                if estate[prefixkey][2]-estate[prefixkey][2+3]>0:  # uplift check
+                    uplift = "^"
+                    temppath=path
+                    path = "\\".join(estate[prefixkey][3])
+                    pathuplift = rt.setfg(CDARK)+temppath[len(path):]
+                if dist==0:
+                    distcol=CLIGHTGREEN
                 else:
-                    nils = "----------------------------------------------------------------"
+                    distcol=CDARKGREEN
+                dist = str(dist).rjust(3)
+
+            else:
+                col = CLIGHTRED
+                dist = "---"
+                distcol = CLIGHTRED
+
+            nils = pair[MYDIR_PRENIL][prefixkey]
+
+            tupl_count = 0
+            for tupl in pair[MYDIR_PREFIX][prefixkey]:
+                tupl_count += pair[MYDIR_PREFIX][prefixkey][tupl]
+
+            print("     ",
+                  rt.setfg(CDARK), nils,
+                  rt.setfg(distcol), dist+uplift,
+                  rt.setfg(col), " \\"+path+pathuplift,
+                  rt.setfg(CDARK), " x"+str(tupl_count), rt.resetfg() )
 
 
-                print("     ",
-                      rt.setfg(CDARK), nils,
-                      rt.setfg(col), dist,
-                      rt.setfg(COFFGREEN), "  \\"+"\\".join(prefixkey),
-                      rt.setfg(CDARK), " x"+str(tupl_count), rt.resetfg() )
-
-                #for tupl in sorted(pair[MYDIR_PREFIX][prefixkey]):
-                #    print(rt.setfg(CVIO1),"                                                                                " + \
-                #         str(tupl)+"  x"+str(pair[MYDIR_PREFIX][prefixkey][tupl]) )
+        #         #for tupl in sorted(pair[MYDIR_PREFIX][prefixkey]):
+        #         #    print(rt.setfg(CVIO1),"                                                                                " + \
+        #         #         str(tupl)+"  x"+str(pair[MYDIR_PREFIX][prefixkey][tupl]) )
 
 
     @staticmethod
@@ -1122,18 +1317,21 @@ class ModelCmp4(ModelTemplate):
             return "SAME_IDENT"
         elif ty==TSAME_SYM:
             return "SAME_SYM  "
-        elif ty==TSAME_ASYM_OK:
-            return "SA_ASY_OK "
-        elif ty==TSAME_ASYM_UNI:
-            return "SA_ASY_UNI"
+        elif ty==TSAME_ASYM:
+            return "SAME_ASY  "
+
+        elif ty==TFUZ_IDENT:
+            return "FUZ_IDENT "
         elif ty==TFUZ_SYM:
-            return "VAR_SAM   "
+            return "FUZ_SAME  "
         elif ty==TFUZ_ASYM:
-            return "VAR_ASYM  "
+            return "FUZ_ASYM  "
+
         elif ty==TUNIQUE:
-            return "UNIQUE    "
+            return "! UNIQ !  "
         else:
-            print("help! unknown type?", ty)
+            print("help! unknown type of pair?", ty)
+            ty[3] = 1
             exit(1)
 
 
@@ -1141,25 +1339,45 @@ class ModelCmp4(ModelTemplate):
     def print_one_pair(inpair):
             pair = inpair
             s = pair[EVAL_STATE]
-            if s[0]>0:
-                colprefixes = CLIGHTRED
+            if s:
+                if s[0]>0:
+                    colprefixes = CLIGHTRED
+                else:
+                    colprefixes = CLIGHTGREEN
+                prefixcount = str(s[0])
             else:
-                colprefixes = CLIGHTGREEN
+                colprefixes = CVIO2
+                prefixcount = "?"
 
-            if s[1]>0:
-                coldist = CLIGHTRED
+            if s:
+                if s[1]>0:
+                    coldist = CLIGHTRED
+                else:
+                    coldist = CLIGHTGREEN
+                hashcount = str(s[1])
             else:
-                coldist = CLIGHTGREEN
+                coldist = CVIO2
+                hashcount = "?"
 
             if (pair[EVAL_TYPE] == TSAME_IDENT) or \
                (pair[EVAL_TYPE] == TSAME_SYM):
                 paircol = CLIGHTGREEN
-            elif pair[EVAL_TYPE] == TSAME_ASYM_OK:
-                paircol = CDARKGREEN
-            elif pair[EVAL_TYPE] == TSAME_ASYM_UNI:
+            elif pair[EVAL_TYPE] == TSAME_ASYM:
                 paircol = CLIGHTRED
             else:
                 paircol = CVIO3
+
+            if pair[EVAL_TYPE] == TSAME_ASYM:
+                typecol = rt.setfg(CLIGHTRED)
+            elif pair[EVAL_TYPE] == TFUZ_IDENT:
+                typecol = rt.setfg(CLIGHTGREEN)
+            elif pair[EVAL_TYPE] == TFUZ_SYM:
+                typecol = rt.setfg(CDARKGREEN)
+            elif (pair[EVAL_TYPE] == TFUZ_ASYM) or \
+               (pair[EVAL_TYPE] == TUNIQUE):
+                typecol = rt.setfg(CLIGHTRED)
+            else:
+                typecol = ""
 
             grandparent = ""
             colgrand = CDARKBLUE
@@ -1172,34 +1390,39 @@ class ModelCmp4(ModelTemplate):
 #                grandparent = pair[PARENT_PAIR][PAIR][0]+'('+str(pair[PARENT_PAIR][PARENT_ID])+')'
                 if gptype == TSAME_IDENT or gptype == TSAME_SYM:
                     colgrand = CLIGHTGREEN
-                elif gptype == TSAME_ASYM_OK:
-                    colgrand = CDARKGREEN
-                elif gptype == TSAME_ASYM_UNI:
+                elif gptype == TSAME_ASYM:
                     colgrand = CLIGHTRED
                 else:  # bug
                     colgrand = CVIO2
 
 
-            gpexe, pexe, myexe = ModelCmp4.find_executions(pair)
+            gpexe, pexe, myexe = ModelCmp4b.find_executions_for_print(pair)
 
             print(str(pair[FIRST_EVENT]).rjust(8),
-                  rt.setfg(CNORM)+ModelCmp4.evaltype2str(pair[EVAL_TYPE]),
+                  rt.setfg(CNORM)+typecol+ModelCmp4b.evaltype2str(pair[EVAL_TYPE]),
                   rt.setfg(CVIO1),str(len(pair[MYDIR_PREFIX])), " ",
-                  rt.setfg(colprefixes),str(s[0])+"|"+
-                  rt.setfg(coldist),    str(s[1]).rjust(2), " ",
+                  rt.setfg(colprefixes),prefixcount+"|"+
+                  rt.setfg(coldist),    hashcount.rjust(2), " ",
 
                   rt.setfg(colgrand), grandparent+gpexe, rt.setfg(CNORM), "===>",
                   rt.setfg(colgrand), pair[PAIR][0]+pexe, rt.setfg(CNORM), "===>",
                   rt.setfg(paircol), pair[PAIR][1]+myexe,
                   rt.setfg(CDARK), "x"+str(len(pair[EXECS])), rt.resetfg())
-            ModelCmp4.print_prefixes(pair)
+            if pair[EVAL_TYPE] == TFUZ_IDENT or \
+               pair[EVAL_TYPE] == TFUZ_SYM or \
+               pair[EVAL_TYPE] == TFUZ_ASYM:
+                print(rt.setfg(CDARK),
+                      " "*(len(grandparent+gpexe)+41), pair[FRIEND][PAIR][0],
+                      " "*(len(pexe)+6),               pair[FRIEND][PAIR][1] )
+
+            ModelCmp4b.print_prefixes(pair)
 
     @staticmethod
     def sort_and_print_pairs_by_state(intuples, inpairs):
         temp = sorted(intuples, key= lambda bla: inpairs[bla][EVAL_STATE][0:2] )
         for looppair in temp:
             pair = inpairs[looppair]
-            ModelCmp4.print_one_pair(pair)
+            ModelCmp4b.print_one_pair(pair)
 
 
     @staticmethod
@@ -1213,14 +1436,14 @@ class ModelCmp4(ModelTemplate):
             while reboots and reboots[0]<int(pair[FIRST_EVENT]):
                 print(rt.setfg(CTURQ)+str(reboots.pop(0)).rjust(8), "REBOOT", rt.resetfg())
 
-            ModelCmp4.print_one_pair(pair)
+            ModelCmp4b.print_one_pair(pair)
 
         while reboots:
             print(rt.setfg(CTURQ)+str(reboots.pop(0)).rjust(8), "REBOOT", rt.resetfg())
 
 
     @staticmethod
-    def find_executions(inpair:dict) -> tuple:
+    def find_executions_for_print(inpair:dict) -> tuple:
         if len(inpair[EXECS])==1:
             myexe = '('+str(inpair[EXECS][0][2])+")"
             parentexe = '('+str(inpair[EXECS][0][1])+')'
@@ -1260,9 +1483,8 @@ class ModelCmp4(ModelTemplate):
     def dump_current_states(inpairs_same, inpairs_var, inreboots : list):
 
         same_ident = []
-        same_sym  = []
-        same_asym_ok = []
-        same_asym_uni = []
+        same_sym   = []
+        same_asym  = []
 
         for looppair in sorted(inpairs_same):
             pair = inpairs_same[looppair]
@@ -1270,64 +1492,16 @@ class ModelCmp4(ModelTemplate):
                 same_ident.append(looppair)
             elif pair[EVAL_TYPE] == TSAME_SYM:
                 same_sym.append(looppair)
-            elif pair[EVAL_TYPE] == TSAME_ASYM_OK:
-                same_asym_ok.append(looppair)
-            elif pair[EVAL_TYPE] == TSAME_ASYM_UNI:
-                same_asym_uni.append(looppair)
+            elif pair[EVAL_TYPE] == TSAME_ASYM:
+                same_asym.append(looppair)
 
-        ModelCmp4.sort_and_print_pairs_by_state(same_ident, inpairs_same)
-        ModelCmp4.sort_and_print_pairs_by_state(same_sym, inpairs_same)
-        ModelCmp4.sort_and_print_pairs_by_state(same_asym_ok, inpairs_same)
-        print(rt.setfg(COFFYELLOW)+"--- SAME_ASYM_UNI ---")
-        ModelCmp4.sort_and_print_pairs_by_time(same_asym_uni, inpairs_same, inreboots)
+        ModelCmp4b.sort_and_print_pairs_by_state(same_ident, inpairs_same)
+        ModelCmp4b.sort_and_print_pairs_by_state(same_sym, inpairs_same)
+        print(rt.setfg(COFFYELLOW)+"--- SAME_ASYM ---")
+        ModelCmp4b.sort_and_print_pairs_by_time(same_asym, inpairs_same, inreboots)
 
-        print(rt.setfg(COFFYELLOW)+"--- VAR* ---")
-
-        # sorted by time
-        temp = sorted(inpairs_var, key= lambda bla: inpairs_var[bla][FIRST_EVENT] )
-        reboots = deepcopy(inreboots)
-
-        for looppair in temp:
-            pair = inpairs_var[looppair]
-
-            while reboots and reboots[0]<pair[FIRST_EVENT]:
-                print(rt.setfg(CTURQ)+str(reboots.pop(0)).rjust(8), "REBOOT", rt.resetfg())
-
-
-            grandparent = ""
-            colgrand = CDARKBLUE
-
-            if len(pair[PARENT_PAIR])==1:
-                gptupl = list(pair[PARENT_PAIR].keys()) [0]  # get only tuple key of dict
-                gpentry = pair[PARENT_PAIR][gptupl][0]          # get data tuple
-                grandparent = gpentry[0] [PAIR][0]
-                gptype      = gpentry[0] [EVAL_TYPE]
-
-                if gptype == TSAME_IDENT or gptype == TSAME_SYM:
-                    colgrand = CLIGHTGREEN
-                elif gptype == TSAME_ASYM_OK:
-                    colgrand = CDARKGREEN
-                elif gptype == TSAME_ASYM_UNI:
-                    colgrand = CLIGHTRED
-                else:  # bug
-                    colgrand = CVIO2
-
-            gpexe, pexe, myexe = ModelCmp4.find_executions(pair)
-
-            print(str(pair[FIRST_EVENT]).rjust(8),
-                  rt.setfg(CNORM)+"VAR_???   ",
-                  rt.setfg(CVIO1),str(len(pair[MYDIR_PREFIX])), " ",
-                  rt.setfg(CDARKRED),    str("?")+"|"+
-                  rt.setfg(CDARKRED),    str("  ?").rjust(2), " ",
-
-                  rt.setfg(colgrand), grandparent+gpexe, rt.setfg(CNORM), "===>",
-                  rt.setfg(colgrand), pair[PAIR][0]+pexe, rt.setfg(CNORM), "===>",
-                  rt.setfg(CLIGHTRED), pair[PAIR][1]+myexe,
-                  rt.setfg(CDARK), "x"+str(len(pair[EXECS])), rt.resetfg())
-            ModelCmp4.print_prefixes(pair)
-
-        while reboots:
-            print(rt.setfg(CTURQ)+str(reboots.pop(0)).rjust(8), "REBOOT", rt.resetfg())
+        print(rt.setfg(COFFYELLOW)+"--- FUZ* ---")
+        ModelCmp4b.sort_and_print_pairs_by_time(inpairs_var.keys(), inpairs_var, inreboots)
 
 
 ###############################################################################
@@ -1354,7 +1528,7 @@ class ModelCmp4(ModelTemplate):
                             mynilhash, othernilhash, mybin_tupl, otherbin_tupl):
         matchprefix = None
         for testprefix in otherstore:
-            matchprefix = ModelCmp4.common_tuple_prefix(myprefix, testprefix)
+            matchprefix = ModelCmp4b.common_tuple_prefix(myprefix, testprefix)
             if matchprefix:
                 break
 
@@ -1366,10 +1540,10 @@ class ModelCmp4(ModelTemplate):
 
             if len(matchprefix)<len(myprefix):
                 locstore = deepcopy(mystore)
-                ModelCmp4.add_prefix(locstore, matchprefix)
-                ModelCmp4.decrease_prefix(locstore, matchprefix)
+                ModelCmp4b.add_prefix(locstore, matchprefix)
+                ModelCmp4b.decrease_prefix(locstore, matchprefix)
                 locnils = {}
-                ModelCmp4.calc_one_nilsimsa(locstore, locnils, mybin_tupl)
+                ModelCmp4b.calc_one_nilsimsa(locstore, locnils, mybin_tupl)
                 print("   my old", rt.setfg(CVIO3), sorted(mystore[myprefix]), rt.resetfg())
                 print("   my new", rt.setfg(CVIO3), sorted(locstore[matchprefix]), rt.resetfg())
                 wasprefix = "M\\"+"\\".join(matchprefix)
@@ -1379,10 +1553,10 @@ class ModelCmp4(ModelTemplate):
 
             if len(matchprefix)<len(testprefix):
                 ostore = deepcopy(otherstore)
-                ModelCmp4.add_prefix(ostore, matchprefix)
-                ModelCmp4.decrease_prefix(ostore, matchprefix)
+                ModelCmp4b.add_prefix(ostore, matchprefix)
+                ModelCmp4b.decrease_prefix(ostore, matchprefix)
                 onils = {}
-                ModelCmp4.calc_one_nilsimsa(ostore, onils, otherbin_tupl)
+                ModelCmp4b.calc_one_nilsimsa(ostore, onils, otherbin_tupl)
                 print("other old", rt.setfg(CVIO2), sorted(otherstore[testprefix]), rt.resetfg())
                 print("other new", rt.setfg(CVIO2), sorted(ostore[matchprefix]), rt.resetfg())
                 wasprefix = "O\\"+"\\".join(testprefix)

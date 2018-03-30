@@ -1,0 +1,2 @@
+[Databases]
+mydatabase = postgresql+psycopg2://postgres:password@postgres:5432/refsys_20171231

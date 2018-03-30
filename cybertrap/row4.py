@@ -91,6 +91,12 @@ def row2dict(row):
             d[TYPE] = WRITE_PAGING
         elif rowtype == 'READ_PAGING':
             d[TYPE] = READ_PAGING
+        elif rowtype == 'MMAP_READ':
+            d[TYPE] = MMAP_READ
+        elif rowtype == 'MMAP_READ_WRITE':
+            d[TYPE] = MMAP_READ_WRITE
+        elif rowtype == 'MMAP_WRITE':
+            d[TYPE] = MMAP_WRITE
         else:
             print('help! unknown/unimplemented file operation: ' + str(d[ID]) +" "+str(rowtype) )
             quit()
