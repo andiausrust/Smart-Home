@@ -3,11 +3,11 @@ from collections import OrderedDict
 from datetime import timedelta
 from pprint import pprint
 
+from cybertrap.database_reader4 import DatabaseReader4
 from cybertrap.filter import Filter
+from cybertrap.row4 import row2dict
 from r4.modeltemplate import ModelTemplate
 from r4.modelconst import *
-
-from cybertrap.dbconst import *
 
 from sys import exit
 from copy import deepcopy
@@ -43,14 +43,16 @@ class ModelCmp4b(ModelTemplate):
         return "CMP4b"
 
     def __init__(self, hostid :str,
-                       name   :str,
-                       cols:list , **kwargs):
+                     hostname :str,
+                       colors :list,
+                           dr :DatabaseReader4, **kwargs):
 
+        self.dr = dr
         self.hostid     = hostid
-        self.hostname   = name
-        self.hostnameid = name+"/"+hostid
+        self.hostname   = hostname
+        self.hostnameid = hostname + "/" + hostid
 
-        self.hostcolhi, self.hostcollo = cols
+        self.hostcolhi, self.hostcollo = colors
 
         self.clear_state()
         self.last_event_consumed = None
@@ -63,7 +65,7 @@ class ModelCmp4b(ModelTemplate):
 
         self.tick_start = None
         self.tick_end = None
-        self.tick_delta   = timedelta(seconds=60) * 60*3    # ticker for model internal periodic tasks
+        self.tick_delta   = timedelta(seconds=60) *10  # 60*3    # ticker for model internal periodic tasks
 
 
     def set_other(self, othermodel):
@@ -89,10 +91,8 @@ class ModelCmp4b(ModelTemplate):
         self.result = OrderedDict()
 #        self.result_window = None    # int
 
-    def get_uniqueness_state(self, timetick: dt.datetime) -> dict:
 
-        result = dict()
-
+    def do_count_pair_types(self) -> ():
         same_ident = 0
         same_sym   = 0
         same_asym  = 0
@@ -124,15 +124,27 @@ class ModelCmp4b(ModelTemplate):
                 fuz_asym +=1
             elif pair[EVAL_TYPE] == TUNIQUE:
                 unique +=1
+            else:
+                print("bug? what var type is this?", pair[PAIR][0],"==>",pair[PAIR][1], " ", pair[LAST_EVENT], pair[EVAL_EVENT], pair[EVAL_TYPE])
+                whatelse += 1
 
-        result['state_same_ident'] = same_ident
-        result['state_same_sym']   = same_sym
-        result['state_same_asym']  = same_asym
+        return (same_ident, same_sym, same_asym, fuz_ident, fuz_sym, fuz_asym, unique)
 
-        result['state_var_fuz_ident'] = fuz_ident
-        result['state_var_fuz_sym']   = fuz_sym
-        result['state_var_fuz_asym']  = fuz_asym
-        result['state_uni']    =  unique
+    def get_uniqueness_state(self, timetick: dt.datetime) -> dict:
+        same_ident, same_sym, same_asym, \
+        fuz_ident,   fuz_sym,  fuz_asym, \
+        unique = self.do_count_pair_types()
+
+        result = dict()
+
+        result['c1_same_ident'] = same_ident
+        result['c2_same_sim']   = same_sym
+        result['c3_same_asym']  = same_asym
+
+        result['c4_fuz_ident'] = fuz_ident
+        result['c5_fuz_sim']   = fuz_sym
+        result['c6_fuz_asym']  = fuz_asym
+        result['c7_uniq']    =  unique
 
         result['sum_same'] = len(self.pairs_same)
         result['sum_fuz']  = len(self.pairs_var)
@@ -141,7 +153,7 @@ class ModelCmp4b(ModelTemplate):
 
         result['percent_100%'] = 1.0
         result['percent_ok' ]  = (same_ident+same_sym + fuz_ident+fuz_sym) / all
-        result['percent_uni' ] = (same_asym+fuz_asym+unique) / all
+        result['percent_inspect' ] = (same_asym+fuz_asym+unique) / all
 
         return result
 
@@ -240,11 +252,23 @@ class ModelCmp4b(ModelTemplate):
         parent_binary = ev[PARENT_PROCESS_NAME]
         parent_id     = ev[PARENT_ID]
 
+        grandparent_binary = ev[GRANDPARENT_PROCESS_NAME]
+        grandparent_id     = ev[GRANDPARENT_ID]
+
+        if grandparent_id is None:
+            if parent_id is None:
+                grandparent_binary = r"\REBOOT"
+            else:
+                grandparent_binary = r"\REBOOT"
+        else:
+            grandparent_id     = int(ev[GRANDPARENT_ID])
+
 
         if parent_id is None:
             # print("P", evid, "parent is None, so I must be the reboot process event")
             # so parent_id==None, too
             parent_binary = r"\REBOOT"
+
             if int(ev[ID]) != self.rebootid:
                 print("BUG?", evid, "parent is None, but my last rebootid is", self.rebootid)
         else:
@@ -263,31 +287,56 @@ class ModelCmp4b(ModelTemplate):
                 # I have seen this pair before
                 item = self.pairs_var[relation]
 
-            if parent_id is None:  # we have no parent, so surely no grandparent info
-                parent_id = -1
-                grandp_id = -1
+            if parent_id is None:  # we have no parent, so surely also no grandparent info
+                parent_id = 0
+                grandp_id = 0
                 gpppair = None
-                gpexec = (-1,-1, parent_id,timestamp)
+
             else:  # find our grandparent
-                result = self.find_parent_pair(parent_id, relation[0])
-                if result:
-                    gpppair, gpexec = result
-                    #if gpppair:
-                    grandp_id = gpexec[1]
+#                result = self.find_parent_pair(parent_id, relation[0])
+#                if result:
+                    #pair     , execentry
+#                    gpppairold, gpexec = result
+                #     #if gpppair:
+                #     grandp_id = gpexec[1]
+                # else:
+                #     grandp_id = -1
+                #     gpppair = None
+                if grandparent_id:
+                    grandp_id = grandparent_id
+                    gpprelation = (grandparent_binary, parent_binary)
+                    if gpprelation in self.pairs_same:
+                        gpppair = self.pairs_same[gpprelation]
+                    elif gpprelation in self.pairs_var:
+                        gpppair = self.pairs_var[gpprelation]
+                    else:
+                        gpppair = None
+                        print("BUG? cannot find grandparent pair for:")
+                        print(grandparent_id, grandparent_binary)
+                        print("", parent_id, parent_binary)
+                        print("", evid, binary)
+                        exit(1)
+
+#                    if gpppairold != gpppair or gpexec[1]!= grandp_id:
+#                        print("grandp mismatch:")
+#                        print("old:", gpexec[1], gpppairold[PAIR])
+#                        print("new:", grandp_id, gpppair)
+#                        exit(1)
                 else:
-                    grandp_id = -1
+                    grandp_id = 0
                     gpppair = None
 
+
             if item:
-                item[EXECS].append((grandp_id,parent_id,evid,timestamp))
+                item[EXECS].append( (grandp_id,parent_id,evid,timestamp) )
                 item[LAST_TIME] = timestamp
                 item[LAST_EVENT] = evid
             else:
                 # new to me, so instantiate a new entry
                 item = self.instantiate_pair(relation,evid,timestamp,parent_id, grandp_id)
-                self.save_pair_dict(relation, item, evid, timestamp, gpppair)
+                self.save_pair_dict(relation, item, evid, timestamp, grandparent_binary)
 
-            if grandp_id != -1:
+            if grandp_id != 0:
                 if gpppair[PAIR] not in item[PARENT_PAIR]:
                     item[PARENT_PAIR][gpppair[PAIR]] =     [ (gpppair, grandp_id,parent_id) ]
                 else:
@@ -298,26 +347,26 @@ class ModelCmp4b(ModelTemplate):
             print(evid, binary, " has no parent :-(")
 
 
-    def _find_execution_of_binary_(self, evid, binary, inpairs):
-        parentpair = None
-        for looppair in inpairs:
-            pair = inpairs[looppair]
-
-            if pair[PAIR][1]==binary:
-                if pair[FIRST_EVENT] <= evid and \
-                   evid <= pair[LAST_EVENT]:
-                        for entry in pair[EXECS]:
-                           if entry[2]==evid:
-                               parentpair = (pair, entry)
-                               break
-        return parentpair
-
-
-    def find_parent_pair(self, parent_id, child_binary):
-        parentpair = self._find_execution_of_binary_(parent_id, child_binary, self.pairs_same)
-        if not parentpair:
-            parentpair = self._find_execution_of_binary_(parent_id, child_binary, self.pairs_var)
-        return parentpair
+    # def _find_execution_of_binary_(self, evid, binary, inpairs):
+    #     parentpair = None
+    #     for looppair in inpairs:
+    #         pair = inpairs[looppair]
+    #
+    #         if pair[PAIR][1]==binary:
+    #             if pair[FIRST_EVENT] <= evid and \
+    #                evid <= pair[LAST_EVENT]:
+    #                     for entry in pair[EXECS]:
+    #                        if entry[2]==evid:
+    #                            parentpair = (pair, entry)
+    #                            break
+    #     return parentpair
+    #
+    #
+    # def find_parent_pair(self, parent_id, child_binary):
+    #     parentpair = self._find_execution_of_binary_(parent_id, child_binary, self.pairs_same)
+    #     if not parentpair:
+    #         parentpair = self._find_execution_of_binary_(parent_id, child_binary, self.pairs_var)
+    #     return parentpair
 
 
     def instantiate_pair(self, relation:tuple, evid:int, timestamp, parent_id:int, grandp_id:int):
@@ -354,7 +403,7 @@ class ModelCmp4b(ModelTemplate):
 
 
 
-    def save_pair_dict(self, relation, item, evid, timestamp, gpppair):
+    def save_pair_dict(self, relation, item, evid, timestamp, gpbinary):
             # insert pair data structure into active sets
             # called either a) for brand new pair or b) for resurrection of expired pair
 
@@ -383,21 +432,22 @@ class ModelCmp4b(ModelTemplate):
                 item_other[FRIEND] = item
 
                 grandparent = ""
-                if gpppair:
-                    grandparent = gpppair[PAIR][0]
+                if gpbinary:
+                    grandparent = gpbinary  #[PAIR][0]
 #                    print( rt.setfg(CDARK), item[PARENT_PAIR][PAIR][0], rt.resetfg(), " ===> ",
 #                           rt.setfg(CDARK), item[PARENT_PAIR][PAIR][1], rt.resetfg() )
 
+                exec = item[EXECS][-1]
                 print(rt.setfg(self.hostcollo), str(len(self.pairs_same)).rjust(2), str(len(self.pairs_var)).rjust(2),
-                      rt.setfg(CDARK), "  -:", self.hostid, evid, timestamp,
-                      rt.setfg(CDARKBLUE), grandparent, rt.resetfg(), "===>",
-                      rt.setfg(CNORM), relation[0], rt.resetfg(), "===>",
+                      rt.setfg(CDARK), " -:", self.hostid, str(exec[2]), timestamp,
+                      rt.setfg(CDARKBLUE), grandparent+"("+str(exec[0])+")", rt.resetfg(), "===>",
+                      rt.setfg(CNORM), relation[0]+"("+str(exec[1])+")", rt.resetfg(), "===>",
                       rt.setfg(CNORM), relation[1], rt.resetfg())
 
             else:
                 grandparent = ""
-                if gpppair:
-                    grandparent = gpppair[PAIR][0]
+                if gpbinary:
+                    grandparent = gpbinary   #[PAIR][0]
 
 #                if item[PARENT_PAIR]:
 #                    print( rt.setfg(CDARK), item[PARENT_PAIR][PAIR][0], rt.resetfg(), " ===> ",
@@ -406,10 +456,11 @@ class ModelCmp4b(ModelTemplate):
                 # new to us and also unknown to other
                 # so just save, until we have some additional events to find a friend,
                 self.pairs_var[relation] = item
+                exec = item[EXECS][-1]
                 print(rt.setfg(self.hostcolhi), str(len(self.pairs_same)).rjust(2), str(len(self.pairs_var)).rjust(2),
-                      rt.setfg(CNORM), " + :", self.hostid, evid, timestamp,
-                      rt.setfg(CDARKBLUE), grandparent, rt.resetfg(), "===>",
-                      rt.setfg(CNORM), relation[0], rt.resetfg(), " ===> ",
+                      rt.setfg(CNORM), "+ :", self.hostid, str(exec[2]), timestamp,
+                      rt.setfg(CDARKBLUE), grandparent+"("+str(exec[0])+")", rt.resetfg(), "===>",
+                      rt.setfg(CNORM), relation[0]+"("+str(exec[1])+")", rt.resetfg(), "===>",
                       rt.setfg(CNORM), relation[1], rt.resetfg())
 
 ##############################################################################
@@ -480,19 +531,30 @@ class ModelCmp4b(ModelTemplate):
                     print("Bug? cannot find ", pretuple)
 
 
+    def _get_process_from_database(self, eventid:str) -> dict:
+        # go to database fetch process event
+        resprox = self.dr.read_sql(eventid, eventid)
+        if int(resprox.rowcount)!=1:
+            print("BUG! queried for process event",eventid, "but instead got",resprox.rowcount, "events?")
+            exit(1)
+
+        procevent = row2dict(resprox.fetchone())
+        Filter.run_filters(procevent)
+        self.to_relative_time(procevent)
+
+        return procevent
 
 
     def consume_file(self, ev):
         evid          = int(ev[ID])
         timestamp     = ev[TIME]
         binary        = ev[PROCESS_NAME]
-        parent_binary = ev[PARENT_PROCESS_NAME]
+        parent_binary = ev[GRANDPARENT_PROCESS_NAME]
 
         fileop   = ev[TYPE]
         src_file = ev[SRC_FILE_NAME]
 
         process_evid = ev[PARENT_ID]   # parent of file event is the process event == the process
-
 
         if process_evid == self.rebootstr:   # pointing to reboot event
             if ev[PID]!=4:  # bug, event was reparented to PID 4
@@ -501,9 +563,6 @@ class ModelCmp4b(ModelTemplate):
             else: # event belongs to PID 4
                 pass
 #                print("F", evid, "parent is reboot event", process_evid, binary, '....and PID<>4!  ', src_file )
-
-#        if binary is not parent_binary:
-#            print("F", evid, "process_name mismatches parent:  ", parent_binary, "-->", binary)
 
 
         if parent_binary is not None:
@@ -515,10 +574,25 @@ class ModelCmp4b(ModelTemplate):
                  item = self.pairs_var.get(relation)
 
             if not item:
-                print(str(evid).rjust(8), "file event with no pair?: ", parent_binary, " ===> ", binary, " ", process_evid, parent_binary)
-                exit(1)
-                return
+                # file event with no existing process pair,
+                # so instantiate an empty process container on the fly
+                parent_id          = int(ev[PARENT_ID])
+                grandparent_id     = int(ev[GRANDPARENT_ID])
 
+                # go to database fetch process event
+                procevent = self._get_process_from_database(ev[PARENT_ID])
+
+                if procevent[ID] != ev[PARENT_ID] or \
+                   procevent[PARENT_ID] != ev[GRANDPARENT_ID]:
+                   print("BUG!", evid, "proc event mismatches file event parent!")
+                   print("expected:",   ev[GRANDPARENT_ID], ev[PARENT_ID])
+                   print("     got:", procevent[PARENT_ID], procevent[ID] )
+                   exit(1)
+
+#                item = self.instantiate_pair(relation,evid,timestamp, parent_id, grandp_id)
+#                self.save_pair_dict(relation, item, evid, timestamp, grandparent_binary)
+                item = self.instantiate_pair(relation,parent_id,timestamp, grandparent_id,   procevent[GRANDPARENT_ID])
+                self.save_pair_dict(relation,   item, parent_id,timestamp,                   procevent[GRANDPARENT_PROCESS_NAME])
 
 
             t1_frags_without_file = self._path_to_fragments_without_file(src_file)
@@ -624,10 +698,7 @@ class ModelCmp4b(ModelTemplate):
 
     def one_tick(self, ev):
 #        print(">>>TICK:", printNiceTimeDelta(ev[RELTIME]), ev[TIME])
-        self.eval_same()
-        self.eval_var()
-        self.other.eval_same()
-        self.other.eval_var()
+        self.do_evaluation()
 
         self.tick_start = self.tick_end
         self.tick_end = self.tick_start + self.tick_delta
@@ -1016,13 +1087,18 @@ class ModelCmp4b(ModelTemplate):
 
 
         elif result >=50 and result <=59:
-            self.eval_same()
-            self.eval_var()
-            self.other.eval_same()
-            self.other.eval_var()
+            self.do_evaluation()
 
             ModelCmp4b.dump_current_states(self.pairs_same, self.pairs_var, self.reboots)
             print("")
+
+
+    def do_evaluation(self):
+        self.eval_same()
+        self.eval_var()
+        self.other.eval_same()
+        self.other.eval_var()
+
 
 
 ##############################################################################
@@ -1395,8 +1471,13 @@ class ModelCmp4b(ModelTemplate):
                 else:  # bug
                     colgrand = CVIO2
 
-
             gpexe, pexe, myexe = ModelCmp4b.find_executions_for_print(pair)
+
+            # FIXME
+            # We cannot go back to the db because we are a staticmethod :-(
+            # if grandparent=="" and len(pair[EXECS])==1:
+            #     procevent = self._get_process_from_database_(str(pair[EXECS][0][0]))
+            #     grandparent = procevent[GRANDPARENT_PROCESS_NAME]
 
             print(str(pair[FIRST_EVENT]).rjust(8),
                   rt.setfg(CNORM)+typecol+ModelCmp4b.evaltype2str(pair[EVAL_TYPE]),
@@ -1445,9 +1526,9 @@ class ModelCmp4b(ModelTemplate):
     @staticmethod
     def find_executions_for_print(inpair:dict) -> tuple:
         if len(inpair[EXECS])==1:
-            myexe = '('+str(inpair[EXECS][0][2])+")"
+            myexe     = '('+str(inpair[EXECS][0][2])+")"
             parentexe = '('+str(inpair[EXECS][0][1])+')'
-            gpexe = '('+str(inpair[EXECS][0][0])+')'
+            gpexe     = '('+str(inpair[EXECS][0][0])+')'
         else:
             myexe = "(?x"+str(len(inpair[EXECS]))+")"
             s = set()
@@ -1503,6 +1584,42 @@ class ModelCmp4b(ModelTemplate):
         print(rt.setfg(COFFYELLOW)+"--- FUZ* ---")
         ModelCmp4b.sort_and_print_pairs_by_time(inpairs_var.keys(), inpairs_var, inreboots)
 
+    @staticmethod
+    def get_pair_data(pair):
+        if pair[EVAL_TYPE] != TUNIQUE:
+            return (pair[FIRST_EVENT], pair[EVAL_TYPE],
+            len(pair[MYDIR_PREFIX]),
+            pair[EVAL_STATE][0],
+            pair[EVAL_STATE][1],
+            pair[PAIR][0],
+            pair[PAIR][1],
+            len(pair[EXECS]))
+        else:
+            return (pair[FIRST_EVENT], pair[EVAL_TYPE],
+            len(pair[MYDIR_PREFIX]),
+            -1,
+            -1,
+            pair[PAIR][0],
+            pair[PAIR][1],
+            len(pair[EXECS]))
+
+    def find_pairs_of_type(self, intypes: list) -> list:
+        resultlist = []
+        for looppair in self.pairs_same:
+            pair = self.pairs_same[looppair]
+            if pair[EVAL_TYPE] in intypes:
+                resultlist.append(ModelCmp4b.get_pair_data(pair))
+
+        for looppair in self.pairs_var:
+            pair = self.pairs_var[looppair]
+            if pair[EVAL_TYPE] in intypes:
+                resultlist.append(ModelCmp4b.get_pair_data(pair))
+
+#        for pair in resultlist:
+#            print(pair[FIRST_EVENT], pair[EVAL_TYPE],
+#                  pair[PAIR][0], "===>", pair[PAIR][1] )
+
+        return resultlist
 
 ###############################################################################
 

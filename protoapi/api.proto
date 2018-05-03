@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+enum Message {
+    GETVERSION         = 0;
+    REINIT             = 1;
+    CONNECT            = 100;
+    CONSUME            = 101;
+    RUNEVALUATION      = 102;
+    GETPAIRSTATESCOUNT = 103;
+    GETPAIRS           = 104;
+}
+
+
+message Request {
+    Message command = 1;
+    oneof req {
+        GetVersionRequest          getversion = 2;
+        ReinitRequest              reinit = 3;
+        ConnectRequest             connect = 4;
+        ConsumeRequest             consume = 5;
+        RunEvaluationRequest       runevaluation = 6;
+        GetPairStatesCountRequest  getpairstatescount = 7;
+        GetPairsRequest            getpairs = 8;
+    }
+}
+
+message Response {
+    Message command = 1;
+    oneof res {
+        GetVersionResponse         getversion = 2;
+        ReinitResponse             reinit = 3;
+        ConnectResponse            connect = 4;
+        ConsumeResponse            consume = 5;
+        RunEvaluationResponse      runevaluation = 6;
+        GetPairStatesCountResponse getpairstatescount = 7;
+        GetPairsResponse           getpairs = 8;
+    }
+}
+
+
+// ============================================================================
+
+// request version information of module
+message GetVersionRequest {
+    int32 data = 1;    // subtype to request
+}
+
+message GetVersionResponse {
+    string data = 1;   // human-readable information
+}
+
+// ----------------------------------------------------------------------------
+
+// cleanup of current calculations and prepare for new ConnectRequest
+message ReinitRequest {
+}
+
+message ReinitResponse {
+}
+
+// ----------------------------------------------------------------------------
+
+message ConnectRequest {
+  string model  = 1;    // name of model for computation
+  string urldb1 = 2;    // URL of database1, e.g. postgresql+psycopg2://postgres:password@postgres:5432/database15
+  int32 hostid1 = 3;    // id of host in database1
+  string urldb2 = 4;    // URL of database2, e.g. postgresql+psycopg2://postgres:password@postgres:5432/database15
+  int32 hostid2 = 5;    // id of host in database2
+}
+
+message ConnectResponse {
+  int32 events1 = 1;    // available events on host1
+  int32 events2 = 2;    // available events on host2
+}
+
+// ----------------------------------------------------------------------------
+
+// consume new events into model, from=to=0 means ignore this host
+message ConsumeRequest {
+  int32 from1 = 1;   // host1: start event id
+  int32   to1 = 2;   // host1: stop event id
+  int32 from2 = 3;   // host2: start event id
+  int32   to2 = 4;   // host2: stop event id
+}
+
+message ConsumeResponse {
+  int32 events1 = 1;  // events actually processed on host1
+  int32 events2 = 2;  // events actually processed on host2
+}
+
+// ----------------------------------------------------------------------------
+
+// trigger recalculation of pair states
+// call this function if new eventa have been consumed
+// and before calling one of the detailed query functions below
+message RunEvaluationRequest {
+  int32 host = 1;     // 1 or 2
+}
+
+message RunEvaluationResponse {
+}
+
+// ----------------------------------------------------------------------------
+
+// get counter of how many pairs are in which of the seven possible states
+message GetPairStatesCountRequest {
+  int32 host = 1;     // 1 or 2
+}
+
+message GetPairStatesCountResponse  {
+  int32 same_ident = 11;   // number pairs in state same_ident
+  int32 same_sym   = 12;
+  int32 same_asym  = 13;
+  int32 fuz_ident  = 14;
+  int32 fuz_sym    = 15;
+  int32 fuz_asym   = 16;
+  int32 unique     = 17;
+}
+
+// ----------------------------------------------------------------------------
+
+enum PAIRTYPE {
+    SAME_IDENT = 0;
+    SAME_SYM   = 1;
+    SAME_ASYM  = 2;
+    FUZ_IDENT  = 3;
+    FUZ_SYM    = 4;
+    FUZ_ASYM   = 5;
+    UNIQUE     = 6;
+}
+
+// query on a specific host the pairs that are in a specific state
+message GetPairsRequest {
+     int32 host = 1;            // 1 or 2
+  repeated PAIRTYPE type = 2;   // list of pair types, e.g. [UNIQUE, FUZ_ASYM, FUZ_SYM]
+}
+
+
+message GetPairsResponse {
+  message PairInfo {
+    int32  eventid = 1;           // event id of process event this pair was first seen
+    PAIRTYPE type = 2;            // current state the pair is in
+    int32 total_prefixes = 3;     // total number of significant directory prefixes
+    int32 unique_prefixes = 4;    // ...of which this many are unique
+    int32 hash_dist = 5;          // sum of all hash distances of all directories
+    string parent = 6;            // parent process name
+    string child = 7;             // child process name
+    int32 execs = 8;              // counter of number of executions of this pair
+  }
+
+  repeated PairInfo entry = 3;
+}
+
+// ----------------------------------------------------------------------------

@@ -3,6 +3,7 @@ from collections import OrderedDict
 from datetime import timedelta
 from pprint import pprint
 
+from cybertrap.database_reader4 import DatabaseReader4
 from cybertrap.filter import Filter
 from r4.modeltemplate import ModelTemplate
 from r4.modelconst import *
@@ -43,13 +44,14 @@ class ModelCmp4(ModelTemplate):
 
     def __init__(self, hostid :str,
                        name   :str,
-                       cols:list , **kwargs):
+                       colors :list,
+                           dr :DatabaseReader4, **kwargs):
 
         self.hostid     = hostid
         self.hostname   = name
         self.hostnameid = name+"/"+hostid
 
-        self.hostcolhi, self.hostcollo = cols
+        self.hostcolhi, self.hostcollo = colors
 
         self.clear_state()
         self.last_event_consumed = None
@@ -492,7 +494,7 @@ class ModelCmp4(ModelTemplate):
         evid          = int(ev[ID])
         timestamp     = ev[TIME]
         binary        = ev[PROCESS_NAME]
-        parent_binary = ev[PARENT_PROCESS_NAME]
+        parent_binary = ev[GRANDPARENT_PROCESS_NAME]
 
         fileop   = ev[TYPE]
         src_file = ev[SRC_FILE_NAME]
@@ -1328,7 +1330,6 @@ class ModelCmp4(ModelTemplate):
 
         while reboots:
             print(rt.setfg(CTURQ)+str(reboots.pop(0)).rjust(8), "REBOOT", rt.resetfg())
-
 
 ###############################################################################
 

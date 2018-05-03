@@ -1,5 +1,5 @@
 import sys
-from util.config import Config, SHELL, IPYTHON, NOTEBOOK
+from util.config import Config
 
 from importlib import import_module
 
@@ -12,6 +12,7 @@ VERSION = [("IPython",    "IPython"),
            ("psycopg2",   "psycopg2"),
            ("matplotlib", "matplotlib"),
            ("bokeh",      "bokeh"),
+           ("pika",       "pika"),
            ]
 
 
@@ -26,22 +27,12 @@ class CmdVersion(CommandTemplate):
                  help=CmdVersion.HELP)
         parser.set_defaults(cls=CmdVersion)
 
+
     @staticmethod
     def print_versions():
-        environment = Config.detect_environment()
-        if environment == SHELL:
-            environment = "shell"
-        elif environment == IPYTHON:
-            import IPython
-            environment = "IPython "+IPython.__version__+", shell"
-        elif environment == NOTEBOOK:
-            import IPython
-            environment = "IPython "+IPython.__version__+", notebook"
-        else:
-            environment = "unknown!"
 
         print("running on:")
-        print("     Python", sys.version.replace('\n', ''), "("+environment+")")
+        print(Config.get_python_version())
 
         print("\nruntime environment:")
         for i in VERSION:

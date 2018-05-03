@@ -31,7 +31,6 @@ class DatabaseReader4:
 
 
     def read_sql(self, event_from: str, event_to: str):
-
         resprox = self.db.conn.execute(
             "SELECT * FROM ("+
             "  SELECT"+
@@ -42,8 +41,10 @@ class DatabaseReader4:
             "    events.pid,"+
 
             "    events.process_name,"+
-            "    parent.id           AS parent_id,"+
-            "    parent.process_name AS parent_process_name,"+
+            "    parent.id                AS parent_id,"+
+            "    parent.process_name      AS parent_process_name,"+
+            "    grandparent.process_name AS grandparent_process_name,"+
+            "    grandparent.id           AS grandparent_id,"+
 
             "    events.time,"+
             "    process_events.domain_name,"+
@@ -61,7 +62,8 @@ class DatabaseReader4:
             "    LEFT OUTER JOIN registry_events USING (id)" +
 #            "   LEFT OUTER JOIN network_events USING (id)" +
 #            "   LEFT OUTER JOIN thread_events USING (id)" +
-            "    LEFT OUTER JOIN events AS parent ON events.parent_id = parent.id"+
+            "    LEFT OUTER JOIN events AS parent      ON events.parent_id = parent.id"+
+            "    LEFT OUTER JOIN events AS grandparent ON parent.parent_id = grandparent.id"+
             "  WHERE events.type_id = 0"+      # process events
 
             "    AND events.id>="+str(event_from) +
@@ -69,7 +71,6 @@ class DatabaseReader4:
             "    AND events."+self.db.hostname_in_events+" =" + str(self.host) +
 
             "  UNION ALL"+
-
 
             "  SELECT"+
             "    events.id AS id,"+
@@ -79,8 +80,10 @@ class DatabaseReader4:
             "    events.pid,"+
 
             "    events.process_name,"+
-            "    parent.id                 AS parent_id,"+
-            "    grant_parent.process_name AS parent_process_name,"+
+            "    parent.id                AS parent_id,"+
+            "    parent.process_name      AS parent_process_name,"+
+            "    grandparent.process_name AS grandparent_process_name,"+
+            "    grandparent.id           AS grandparent_id,"+
 
             "    events.time,"+
             "    process_events.domain_name,"+
@@ -98,8 +101,8 @@ class DatabaseReader4:
             "   LEFT OUTER JOIN registry_events USING (id)" +
 #            "   LEFT OUTER JOIN network_events USING (id)" +
 #            "   LEFT OUTER JOIN thread_events USING (id)" +
-            "    LEFT OUTER JOIN events AS parent ON events.parent_id = parent.id"+
-            "    LEFT OUTER JOIN events AS grant_parent ON parent.parent_id = grant_parent.id"+
+            "    LEFT OUTER JOIN events AS parent      ON events.parent_id = parent.id"+
+            "    LEFT OUTER JOIN events AS grandparent ON parent.parent_id = grandparent.id"+
             "  WHERE events.type_id!=0 "+     # not process events (!=0),
                                               # or for faster testing only file events (=4)
 
@@ -110,8 +113,6 @@ class DatabaseReader4:
             ") AS x"+
             " ORDER BY x.id ASC" )
         return resprox
-
-
 
 
 

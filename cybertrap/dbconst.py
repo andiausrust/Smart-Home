@@ -66,9 +66,11 @@ PID =             "pid"
 PROCESS_NAME =    "process_name"
 TIME =            "time"
 IS_BLACKLISTED =  "is_blacklisted"
-PARENT_ID =       "parent_id"
 SEQUENCE_ID =     "sequence_id"
+PARENT_ID =           "parent_id"
 PARENT_PROCESS_NAME = "parent_process_name"
+GRANDPARENT_ID =           "grandparent_id"
+GRANDPARENT_PROCESS_NAME = "grandparent_process_name"
 
 # network_events
 PROTOCOL_ID            = "protocol_id"

@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 from os import get_terminal_size, environ
-from sys import exit
+from sys import exit, version
 
 import pandas as pd
 import re
@@ -54,6 +54,22 @@ class Config:
 #        print("accessing "+tempurl)
         return tempurl
 
+
+    @staticmethod
+    def get_python_version() -> str:
+        environment = Config.detect_environment()
+        if environment == SHELL:
+            environment = "shell"
+        elif environment == IPYTHON:
+            import IPython
+            environment = "IPython "+IPython.__version__+", shell"
+        elif environment == NOTEBOOK:
+            import IPython
+            environment = "IPython "+IPython.__version__+", notebook"
+        else:
+            environment = "unknown!"
+
+        return "Python "+version.replace('\n', '')+" ("+environment+")"
 
 
     @staticmethod

@@ -22,7 +22,7 @@ def row2dict(row):
     d[TIME]         = row[TIME]
 #    d[TIME].replace(tzinfo=None)
 
-    if row[PARENT_ID] is None:    # should only happen on reboot
+    if row[PARENT_ID] is None:
         d[PARENT_ID] = None
     else:
         d[PARENT_ID] = str(row[PARENT_ID])
@@ -31,8 +31,20 @@ def row2dict(row):
         d[PARENT_PROCESS_NAME] = None
     else:
         d[PARENT_PROCESS_NAME] = str(row[PARENT_PROCESS_NAME]).lower()
-    d[SEQUENCE_ID]  = int(row[SEQUENCE_ID])
 
+
+    if row[GRANDPARENT_ID] is None:
+        d[GRANDPARENT_ID] = None
+    else:
+        d[GRANDPARENT_ID] = str(row[GRANDPARENT_ID])
+
+    if row[GRANDPARENT_PROCESS_NAME] is None:
+        d[GRANDPARENT_PROCESS_NAME] = None
+    else:
+        d[GRANDPARENT_PROCESS_NAME] = str(row[GRANDPARENT_PROCESS_NAME]).lower()
+
+
+    d[SEQUENCE_ID]  = int(row[SEQUENCE_ID])
     type_id = d[TYPE_ID]
 
     if type_id == PROCESS:

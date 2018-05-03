@@ -17,6 +17,7 @@ class CmdPgStat(CommandTemplate):
                                        aliases=['pgst'],
                                        help=CmdPgStat.HELP)
         parser.add_argument("-d", metavar="dbalias", dest='db',
+                            required=False,
                             help="database alias")
 
         parser.add_argument("-reboots", dest='print_reboots',
@@ -32,6 +33,10 @@ class CmdPgStat(CommandTemplate):
 
 
     def run(self, db=False, print_reboots=False, sort_by_host=False, **kwargs):
+
+        if not db:
+            print("no database specified"); exit(1)
+
         db = Config.get_database(db)
 
         db = Database(db)

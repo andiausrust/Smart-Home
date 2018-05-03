@@ -51,6 +51,13 @@ class Database:
             self.is2017format = False
             self.hostname_in_events = 'hostnames_id'
 
+    def shutdown(self):
+        self.engine.dispose()
+        # help garbage collector?
+        self.engine = None
+        self.meta = None
+        self.conn = None
+        self.inspector = None
 
 
     def _get_first_last_row_(self, table):
@@ -132,3 +139,10 @@ class Database:
 
         # df[id,hostname,events], { id -> {'events'-> , 'hostname'-> } }
         return df, df.transpose().to_dict(orient='dict')
+
+
+    def get_count_of_host_event(self, hostid:str) -> int:
+                events = pd.read_sql(
+                    "SELECT COUNT (*) FROM (SELECT * FROM events WHERE "+self.hostname_in_events+"="+str(hostid)+") AS x",
+                    self.engine)
+                return int(events['count'][0])

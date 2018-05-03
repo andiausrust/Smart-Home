@@ -55,17 +55,25 @@ class Filter:
         ev[PROCESS_NAME] = Filter.remove_harddiskvolume(ev[PROCESS_NAME])
 
         if ev[PROCESS_NAME] == SYSTEM_PROCESS_NAME:
-            ev[PROCESS_NAME] = r"\SYSTEM"
+           ev[PROCESS_NAME] = r"\SYSTEM"
         elif ev[PROCESS_NAME] == DUMMY_PROCESS_NAME:
-            ev[PROCESS_NAME] = r"\DUMMY_PROCESS_EVENT"
+             ev[PROCESS_NAME] = r"\DUMMY_PROCESS_EVENT"
 
         if ev[PARENT_PROCESS_NAME] is not None:
             ev[PARENT_PROCESS_NAME] = Filter.remove_harddiskvolume(ev[PARENT_PROCESS_NAME])
 
             if ev[PARENT_PROCESS_NAME] == SYSTEM_PROCESS_NAME:
-                ev[PARENT_PROCESS_NAME] = r"\SYSTEM"
+               ev[PARENT_PROCESS_NAME] = r"\SYSTEM"
             elif ev[PARENT_PROCESS_NAME] == DUMMY_PROCESS_NAME:
-                ev[PARENT_PROCESS_NAME] = r"\DUMMY_PROCESS_EVENT"
+                 ev[PARENT_PROCESS_NAME] = r"\DUMMY_PROCESS_EVENT"
+
+        if ev[GRANDPARENT_PROCESS_NAME] is not None:
+            ev[GRANDPARENT_PROCESS_NAME] = Filter.remove_harddiskvolume(ev[GRANDPARENT_PROCESS_NAME])
+
+            if ev[GRANDPARENT_PROCESS_NAME] == SYSTEM_PROCESS_NAME:
+               ev[GRANDPARENT_PROCESS_NAME] = r"\SYSTEM"
+            elif ev[GRANDPARENT_PROCESS_NAME] == DUMMY_PROCESS_NAME:
+                 ev[GRANDPARENT_PROCESS_NAME] = r"\DUMMY_PROCESS_EVENT"
 
         if ev[TYPE_ID] == FILE:
             ev[SRC_FILE_NAME] = Filter.remove_harddiskvolume(ev[SRC_FILE_NAME])

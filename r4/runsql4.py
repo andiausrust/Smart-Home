@@ -20,15 +20,24 @@ class RunSQL4:
         self.dr2 = dr2
 
 
-                                     # in generic case is a ModelTemplate
-    def run_events(self, model1, model2: ModelCmp4,
-                     inrange1, inrange2: list,
-                     quiet=False):
+                                           # in generic case is a ModelTemplate
+    def run_events(self, model1,   model2: ModelCmp4,
+                       inrange1, inrange2: list,
+                   quiet=False):
 
-        fromid1 = inrange1[0]
-        toid1 =   inrange1[1]
-        fromid2 = inrange2[0]
-        toid2 =   inrange2[1]
+        if inrange1:
+            fromid1 = inrange1[0]
+            toid1 =   inrange1[1]
+        else:
+            fromid1 = 0
+            toid1 = 0
+
+        if inrange2:
+            fromid2 = inrange2[0]
+            toid2 =   inrange2[1]
+        else:
+            fromid2 = 0
+            toid2 = 0
 
         if not quiet:
             lfrom = max( len(str(fromid1)), len(str(fromid2)))
@@ -42,25 +51,26 @@ class RunSQL4:
 
         time_start = time.time()
 
-        # send query to databases
-        resprox1 = self.dr1.read_sql(str(fromid1), str(toid1))
-        if not quiet:
-            print("after SELECT1: ", resprox1.rowcount, "events", "("+str(int(resprox1.rowcount/ (time.time()-time_start))), "events/s)")
-
-        resprox2 = self.dr2.read_sql(str(fromid2), str(toid2))
-        if not quiet:
-            print("after SELECT2: ", resprox2.rowcount, "events", "("+str(int(resprox2.rowcount/ (time.time()-time_start))), "events/s)")
-
-
         # event streams counters
         events_processed1 = 0
         events_processed2 = 0
+        events_total1 = 0
+        events_total2 = 0
 
-        # luckily Postgres reports number of result rows
-        events_total1 = int(resprox1.rowcount)
-        events_total2 = int(resprox2.rowcount)
-        ev1rjust = len(str(events_total1))
-        ev2rjust = len(str(events_total2))
+        # send query to databases
+        if inrange1:
+            resprox1 = self.dr1.read_sql(str(fromid1), str(toid1))
+            events_total1 = int(resprox1.rowcount)
+            if not quiet:
+                print("after SELECT1: ", resprox1.rowcount, "events", "("+str(int(resprox1.rowcount/ (time.time()-time_start))), "events/s)")
+
+        if inrange2:
+            resprox2 = self.dr2.read_sql(str(fromid2), str(toid2))
+            events_total2 = int(resprox2.rowcount)
+            if not quiet:
+                print("after SELECT2: ", resprox2.rowcount, "events", "("+str(int(resprox2.rowcount/ (time.time()-time_start))), "events/s)")
+
+
         if not quiet:
             print(str(events_total1+events_total2), "total events to process")
             print("")
@@ -78,26 +88,17 @@ class RunSQL4:
         else:
             ev2 = None
 
-        # FIXME: actually when may this be legal?
         if (ev1==None) and (ev2==None):
-            print("BUG? no results from db1 AND db2 stream?"); exit(1)
-
-
-        # find stream with lowest starttime
-        # if ev1:
-        #     timenow = ev1[RELTIME]
-        # if ev2:
-        #     if not ev1:
-        #         timenow = ev2[RELTIME]
-        #     else:
-        #         if ev2[RELTIME] < timenow:
-        #             timenow = ev2[RELTIME]
+            return (0,0)
+            # print("BUG? no results from db1 AND db2 stream?"); exit(1)
 
 
         time_start = time.time()
 
         while True:
 #            if (events_processed1+events_processed2) % 40000 == 0:
+#                ev1rjust = len(str(events_total1))
+#                ev2rjust = len(str(events_total2))
 #                print("count ", str(events_processed1).rjust(ev1rjust), printNiceTimeDelta(ev1[RELTIME]), "",
 #                                str(events_processed2).rjust(ev2rjust), printNiceTimeDelta(ev2[RELTIME]) )
 
@@ -108,7 +109,6 @@ class RunSQL4:
 
             # db1 finished, so do one from db2
             if events_processed1 == events_total1:
-#                timenow = ev2[RELTIME]
                 model2.consume_event(ev2)
                 events_processed2 +=1
                 if events_processed2 < events_total2:
@@ -118,7 +118,6 @@ class RunSQL4:
 
             # db2 finished, so do one from db1
             if events_processed2 == events_total2:
-#                timenow = ev1[RELTIME]
                 model1.consume_event(ev1)
                 events_processed1 +=1
                 if events_processed1 < events_total1:
@@ -127,14 +126,12 @@ class RunSQL4:
                 continue
 
             if ev1[RELTIME] <= ev2[RELTIME]:
-#                timenow = ev1[RELTIME]
                 model1.consume_event(ev1)
                 events_processed1 +=1
                 if events_processed1 < events_total1:
                     ev1 = row2dict(resprox1.fetchone())
                     model1.to_relative_time(ev1)
             else:
-#                timenow = ev2[RELTIME]
                 model2.consume_event(ev2)
                 events_processed2 +=1
                 if events_processed2 < events_total2:
@@ -142,8 +139,11 @@ class RunSQL4:
                     model2.to_relative_time(ev2)
 
         if not quiet:
-            print("")
-            print("...last DB1:", ev1[ID], printNiceTimeDelta(ev1[RELTIME]), "@", ev1[TIME])
-            print("...last DB2:", ev2[ID], printNiceTimeDelta(ev2[RELTIME]), "@", ev2[TIME])
+            if events_total1>0:
+                print("...last DB1:", ev1[ID], printNiceTimeDelta(ev1[RELTIME]), "@", ev1[TIME])
+            if events_total2>0:
+                print("...last DB2:", ev2[ID], printNiceTimeDelta(ev2[RELTIME]), "@", ev2[TIME])
             processed = events_processed1+events_processed2
             print("-->", processed, "events", "("+str(int(processed/ (time.time()-time_start))), "events/s)")
+
+        return (events_processed1, events_processed2)
