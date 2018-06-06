@@ -62,12 +62,12 @@ def row2dict(row):
 
     elif type_id == NETWORK:
         ### FIXME -> check first if database schema changed!
-        pass
+#        pass
 #        d[PROTOCOL_ID]       = int(row[PROTOCOL_ID])
 #        d[LOCAL_IP_ADDRESS]  = str(row[LOCAL_IP_ADDRESS])
 #        d[LOCAL_PORT]        = int(row[LOCAL_PORT])
-#        d[REMOTE_IP_ADDRESS] = str(row[REMOTE_IP_ADDRESS])
-#        d[REMOTE_PORT]       = int(row[REMOTE_PORT])
+        d[REMOTE_IP_ADDRESS] = str(row[REMOTE_IP_ADDRESS])
+        d[REMOTE_PORT]       = int(row[REMOTE_PORT])
 #        d[IS_CONNECTION_OUTGOING] = row[IS_CONNECTION_OUTGOING]
 #        d[EVILNESS]    = bool(EVILNESS)
 

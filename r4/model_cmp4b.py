@@ -37,6 +37,8 @@ CVIO1 = 132
 CTURQ = 14
 COFFYELLOW = 228
 
+CORANGE = 214
+
 
 class ModelCmp4b(ModelTemplate):
     def get_modelname(self):
@@ -45,7 +47,8 @@ class ModelCmp4b(ModelTemplate):
     def __init__(self, hostid :str,
                      hostname :str,
                        colors :list,
-                           dr :DatabaseReader4, **kwargs):
+                           dr :DatabaseReader4,
+                        **kwargs):
 
         self.dr = dr
         self.hostid     = hostid
@@ -63,9 +66,17 @@ class ModelCmp4b(ModelTemplate):
         self.rebootstr = None   # as string
         self.time_first_reboot = None   # time of first reboot
 
+        self.fromreboot = True  # default
+        if 'fromreboot' in kwargs:
+            self.fromreboot = kwargs['fromreboot']
+
+        self.quiet = False
+        if 'quiet' in kwargs:
+            self.quiet = kwargs['quiet']
+
         self.tick_start = None
-        self.tick_end = None
-        self.tick_delta   = timedelta(seconds=60) *10  # 60*3    # ticker for model internal periodic tasks
+        self.tick_end   = None
+        self.tick_delta = timedelta(seconds=60) *10  # 60*3    # ticker for model internal periodic tasks
 
 
     def set_other(self, othermodel):
@@ -193,8 +204,16 @@ class ModelCmp4b(ModelTemplate):
         self.rebootid =  int(row[ID])
         self.rebootstr = row[ID]
 
-        print(rt.setfg(self.hostcolhi),
-            "  REBOOT at ",row[ID], self.hostnameid, "  ", row[TIME], rt.resetfg())
+        if not self.quiet:
+            if not self.fromreboot and not self.last_event_consumed:
+                print(rt.setfg(CLIGHTRED), "FORCED"+
+                      rt.setfg(self.hostcolhi),
+                     "REBOOT at ",row[ID], self.hostnameid, "  ", row[TIME], rt.resetfg())
+            else:
+                print(rt.setfg(self.hostcolhi),
+                    "  REBOOT at ",row[ID], self.hostnameid, "  ", row[TIME], rt.resetfg())
+
+
         self.reboots.append(self.rebootid)
 
         # first reboot? need to remember time
@@ -247,7 +266,7 @@ class ModelCmp4b(ModelTemplate):
         cmd_line          = ev[COMMAND_LINE]
         user_name         = ev[USER_NAME]
         domain_name       = ev[DOMAIN_NAME]
-#       working_directory = ev[WORKING_DIRECTORY]   # ignore
+#       working_directory = ev[WORKING_DIRECTORY]   # ignore for now
 
         parent_binary = ev[PARENT_PROCESS_NAME]
         parent_id     = ev[PARENT_ID]
@@ -293,16 +312,7 @@ class ModelCmp4b(ModelTemplate):
                 gpppair = None
 
             else:  # find our grandparent
-#                result = self.find_parent_pair(parent_id, relation[0])
-#                if result:
-                    #pair     , execentry
-#                    gpppairold, gpexec = result
-                #     #if gpppair:
-                #     grandp_id = gpexec[1]
-                # else:
-                #     grandp_id = -1
-                #     gpppair = None
-                if grandparent_id:
+                if grandparent_id and item:
                     grandp_id = grandparent_id
                     gpprelation = (grandparent_binary, parent_binary)
                     if gpprelation in self.pairs_same:
@@ -311,17 +321,13 @@ class ModelCmp4b(ModelTemplate):
                         gpppair = self.pairs_var[gpprelation]
                     else:
                         gpppair = None
-                        print("BUG? cannot find grandparent pair for:")
-                        print(grandparent_id, grandparent_binary)
-                        print("", parent_id, parent_binary)
-                        print("", evid, binary)
-                        exit(1)
-
-#                    if gpppairold != gpppair or gpexec[1]!= grandp_id:
-#                        print("grandp mismatch:")
-#                        print("old:", gpexec[1], gpppairold[PAIR])
-#                        print("new:", grandp_id, gpppair)
-#                        exit(1)
+                        grandp_id = 0
+                        if self.fromreboot:
+                            print("BUG? cannot find grandparent pair for:")
+                            print("", grandparent_id, grandparent_binary)
+                            print("", parent_id, parent_binary)
+                            print("", evid, binary)
+                            exit(1)
                 else:
                     grandp_id = 0
                     gpppair = None
@@ -438,11 +444,12 @@ class ModelCmp4b(ModelTemplate):
 #                           rt.setfg(CDARK), item[PARENT_PAIR][PAIR][1], rt.resetfg() )
 
                 exec = item[EXECS][-1]
-                print(rt.setfg(self.hostcollo), str(len(self.pairs_same)).rjust(2), str(len(self.pairs_var)).rjust(2),
-                      rt.setfg(CDARK), " -:", self.hostid, str(exec[2]), timestamp,
-                      rt.setfg(CDARKBLUE), grandparent+"("+str(exec[0])+")", rt.resetfg(), "===>",
-                      rt.setfg(CNORM), relation[0]+"("+str(exec[1])+")", rt.resetfg(), "===>",
-                      rt.setfg(CNORM), relation[1], rt.resetfg())
+                if not self.quiet:
+                    print(rt.setfg(self.hostcollo), str(len(self.pairs_same)).rjust(2), str(len(self.pairs_var)).rjust(2),
+                          rt.setfg(CDARK), " -:", self.hostid, str(exec[2]), timestamp,
+                          rt.setfg(CDARKBLUE), grandparent+"("+str(exec[0])+")", rt.resetfg(), "===>",
+                          rt.setfg(CNORM), relation[0]+"("+str(exec[1])+")", rt.resetfg(), "===>",
+                          rt.setfg(CNORM), relation[1], rt.resetfg())
 
             else:
                 grandparent = ""
@@ -457,11 +464,12 @@ class ModelCmp4b(ModelTemplate):
                 # so just save, until we have some additional events to find a friend,
                 self.pairs_var[relation] = item
                 exec = item[EXECS][-1]
-                print(rt.setfg(self.hostcolhi), str(len(self.pairs_same)).rjust(2), str(len(self.pairs_var)).rjust(2),
-                      rt.setfg(CNORM), "+ :", self.hostid, str(exec[2]), timestamp,
-                      rt.setfg(CDARKBLUE), grandparent+"("+str(exec[0])+")", rt.resetfg(), "===>",
-                      rt.setfg(CNORM), relation[0]+"("+str(exec[1])+")", rt.resetfg(), "===>",
-                      rt.setfg(CNORM), relation[1], rt.resetfg())
+                if not self.quiet:
+                    print(rt.setfg(self.hostcolhi), str(len(self.pairs_same)).rjust(2), str(len(self.pairs_var)).rjust(2),
+                          rt.setfg(CNORM), "+ :", self.hostid, str(exec[2]), timestamp,
+                          rt.setfg(CDARKBLUE), grandparent+"("+str(exec[0])+")", rt.resetfg(), "===>",
+                          rt.setfg(CNORM), relation[0]+"("+str(exec[1])+")", rt.resetfg(), "===>",
+                          rt.setfg(CNORM), relation[1], rt.resetfg())
 
 ##############################################################################
 
@@ -544,6 +552,27 @@ class ModelCmp4b(ModelTemplate):
 
         return procevent
 
+    @staticmethod
+    def _preprocess_file_for_special_dirs(pair, src_file):
+            t1_frags_without_file = ModelCmp4b._path_to_fragments_without_file(src_file)
+
+#            t1 = tuple(map(len,t1_frags_without_file))
+#            print(src_file, "", t1_frags_without_file, "", t1)
+            l = len(pair[BIN_TUPL_CUT])
+            if t1_frags_without_file[:l] == pair[BIN_FRAG_CUT]:   # if t1[:l]== binentry[BIN_TUPL_CUT]:
+                t1_frags_without_file = ["EXEDIR"]+t1_frags_without_file[l:]
+#                t1 = (-99,)+t1[l:]
+
+            # access in root, so rise by one virtual ROOT directory
+            if len(t1_frags_without_file)==0:
+#                print("S", src_file, evid)
+                filename = ModelCmp4b._path_to_fragments_with_file(src_file)[-1]
+                t1_frags_without_file = ["ROOT"]
+#                t1 = (-90,len(filename))
+
+#            print(src_file, "", t1_frags_without_file, "", t1)
+            return t1_frags_without_file
+
 
     def consume_file(self, ev):
         evid          = int(ev[ID])
@@ -595,49 +624,35 @@ class ModelCmp4b(ModelTemplate):
                 self.save_pair_dict(relation,   item, parent_id,timestamp,                   procevent[GRANDPARENT_PROCESS_NAME])
 
 
-            t1_frags_without_file = self._path_to_fragments_without_file(src_file)
-#            t1 = tuple(map(len,t1_frags_without_file))
-
-#            print(src_file, "", t1_frags_without_file, "", t1)
-
-            l = len(item[BIN_TUPL_CUT])
-            if t1_frags_without_file[:l] == item[BIN_FRAG_CUT]:   # if t1[:l]== binentry[BIN_TUPL_CUT]:
-                t1_frags_without_file = ["EXEDIR"]+t1_frags_without_file[l:]
-#                t1 = (-99,)+t1[l:]
-
-            # access in root, so rise by one virtual ROOT directory
-            if len(t1_frags_without_file)==0:
-#                print("S", src_file, evid)
-                filename = self._path_to_fragments_with_file(src_file)[-1]
-                t1_frags_without_file = ["ROOT"]
-#                t1 = (-90,len(filename))
-
-#            print(src_file, "", t1_frags_without_file, "", t1)
+            t1_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, src_file)
             self.add_prefix(item[MYDIR_PREFIX], t1_frags_without_file)
 
 
             if fileop == RENAME:
                 dst_file = ev[DST_FILE_NAME]
 
-                t2_frags_without_file = self._path_to_fragments_without_file(dst_file)
-#                t2 = tuple(map(len,t2_frags_without_file))
-#                print(dst_file, "", t2_frags_without_file, "", t2)
-
-                l = len(item[BIN_TUPL_CUT])
-                if t2_frags_without_file[:l] == item[BIN_FRAG_CUT]:   # if t2[:l]== binentry[BIN_TUPL_CUT]:
-                    t2_frags_without_file = ["EXEDIR"]+t2_frags_without_file[l:]
-#                    t2 = (-99,)+t2[l:]
-
-                # access in root, so rise by one virtual ROOT directory
-                if len(t2_frags_without_file)==0:
-#                    print("D", src_file, evid)
-                    filename = self._path_to_fragments_with_file(dst_file)[-1]
-                    t2_frags_without_file = ["ROOT"]
-#                    t2 = (-90,len(filename))
-
-#                print(dst_file, "", t2_frags_without_file, "", t2)
-
+                t2_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, dst_file)
                 self.add_prefix(item[MYDIR_PREFIX], t2_frags_without_file)
+
+#                 t2_frags_without_file = self._path_to_fragments_without_file(dst_file)
+# #                t2 = tuple(map(len,t2_frags_without_file))
+# #                print(dst_file, "", t2_frags_without_file, "", t2)
+#
+#                 l = len(item[BIN_TUPL_CUT])
+#                 if t2_frags_without_file[:l] == item[BIN_FRAG_CUT]:   # if t2[:l]== binentry[BIN_TUPL_CUT]:
+#                     t2_frags_without_file = ["EXEDIR"]+t2_frags_without_file[l:]
+# #                    t2 = (-99,)+t2[l:]
+#
+#                 # access in root, so rise by one virtual ROOT directory
+#                 if len(t2_frags_without_file)==0:
+# #                    print("D", src_file, evid)
+#                     filename = self._path_to_fragments_with_file(dst_file)[-1]
+#                     t2_frags_without_file = ["ROOT"]
+# #                    t2 = (-90,len(filename))
+#
+# #                print(dst_file, "", t2_frags_without_file, "", t2)
+#
+#                 self.add_prefix(item[MYDIR_PREFIX], t2_frags_without_file)
 
 
 
@@ -652,6 +667,11 @@ class ModelCmp4b(ModelTemplate):
 ##############################################################################
 
     def consume_event(self, ev: dict):
+
+        if not self.last_event_consumed:  # this is first event consumed
+            if not self.fromreboot:    # and not from reboot
+                self.set_reboot(ev)       # first event is reboot by force
+
         if ev[SEQUENCE_ID]==0 and ev[PARENT_ID]==None:
             self.set_reboot(ev)
 
@@ -784,7 +804,7 @@ class ModelCmp4b(ModelTemplate):
 
 
 
-    def eval_same(self):
+    def eval_same(self, force=False):
         for looppair in self.pairs_same:
             pair = self.pairs_same[looppair]
             friend = pair[FRIEND]
@@ -794,7 +814,7 @@ class ModelCmp4b(ModelTemplate):
                 print(pair[PAIR])
                 exit(1)
 
-            needs_reevaluation = False
+            needs_reevaluation = force
 
             if pair[LAST_EVENT] != pair[EVAL_EVENT]:
                 ModelCmp4b.calc_one_nilsimsa(pair[MYDIR_PREFIX], pair[MYDIR_PRENIL], pair[BIN_TUPL])
@@ -1024,6 +1044,7 @@ class ModelCmp4b(ModelTemplate):
 ##############################################################################
 
 
+
     def print_result(self, result=None):
         if not result:
             return
@@ -1036,6 +1057,9 @@ class ModelCmp4b(ModelTemplate):
 #            print("30 - raw dump of all prefixes and hashes")
 #            print("40 - r4 matcher by end of run evaluation")
             print("50 - r4 matcher by periodic tick evaluation")
+            print("60 - suspicious pairs summary")
+            print("61 - suspicious pairs summary - with file access details")
+            print("69 - suspicious pairs summary - you know want you want")
             pass
 
 
@@ -1087,18 +1111,24 @@ class ModelCmp4b(ModelTemplate):
 
 
         elif result >=50 and result <=59:
-            self.do_evaluation()
+            self.do_evaluation(force=True)
 
             ModelCmp4b.dump_current_states(self.pairs_same, self.pairs_var, self.reboots)
             print("")
 
+        elif result >=60 and result <=69:
+            self.do_evaluation(force=True)
 
-    def do_evaluation(self):
-        self.eval_same()
+            self.pretty_print_for_humans(result)
+            print("")
+
+
+
+    def do_evaluation(self,force=False):
+        self.eval_same(force)
         self.eval_var()
-        self.other.eval_same()
+        self.other.eval_same(force)
         self.other.eval_var()
-
 
 
 ##############################################################################
@@ -1488,7 +1518,7 @@ class ModelCmp4b(ModelTemplate):
                   rt.setfg(colgrand), grandparent+gpexe, rt.setfg(CNORM), "===>",
                   rt.setfg(colgrand), pair[PAIR][0]+pexe, rt.setfg(CNORM), "===>",
                   rt.setfg(paircol), pair[PAIR][1]+myexe,
-                  rt.setfg(CDARK), "x"+str(len(pair[EXECS])), rt.resetfg())
+                  rt.setfg(CDARK), "x"+str(len(pair[EXECS])), rt.resetfg(), pair[LAST_EVENT], pair[EVAL_EVENT] )
             if pair[EVAL_TYPE] == TFUZ_IDENT or \
                pair[EVAL_TYPE] == TFUZ_SYM or \
                pair[EVAL_TYPE] == TFUZ_ASYM:
@@ -1558,6 +1588,217 @@ class ModelCmp4b(ModelTemplate):
                 gpexe = "(?x"+str(len(s))+")"
 
         return (gpexe, parentexe, myexe)
+
+
+
+    def find_asym_prefixes(self, inpair):
+        result = []
+
+        pair = inpair
+
+        if pair[EVAL_STATE]:
+            estate = pair[EVAL_STATE][2]
+        else:
+            estate = None
+
+        for prefixkey in sorted(pair[MYDIR_PREFIX]):
+
+            if estate and prefixkey in estate:
+                continue
+            else:
+                col = CVIO3
+
+            tupl_count = 0
+            for tupl in pair[MYDIR_PREFIX][prefixkey]:
+                tupl_count += pair[MYDIR_PREFIX][prefixkey][tupl]
+
+            result.append( (prefixkey, tupl_count) )
+#            print(" "*(50+len(pair[PAIR][0])),
+#                  rt.setfg(col), " \\"+path,
+#                  rt.setfg(CDARK), " x"+str(tupl_count), rt.resetfg() )
+        return result
+
+
+    def _find_files_for_file_(self, src_file, prefix, prefixkey, ev, pair, knownfiles, allprocessids, resultverbosity):
+                if ev[GRANDPARENT_PROCESS_NAME] == pair[PAIR][0] and \
+                        ev[PARENT_PROCESS_NAME] == pair[PAIR][1]:
+
+                    frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file)
+                    frags_without_file = tuple(frags_without_filei)
+
+    #                print(prefixkey, "   ", frags_without_file)
+
+                    if len(prefixkey)<=len(frags_without_file):
+                        if frags_without_file[0:len(prefixkey)] == prefixkey:
+
+#                            print( ev[GRANDPARENT_PROCESS_NAME], ev[PARENT_PROCESS_NAME], ev[PROCESS_NAME],
+#                                   "*", pair[PAIR][0], pair[PAIR][1] )
+
+                            process_evid = int(ev[PARENT_ID])   # parent of file event is the process event == the process
+                            allprocessids.add(process_evid)
+
+                            if src_file in knownfiles:  # already seen once, no need to print again?
+                                if resultverbosity < 69:
+                                    return
+
+                            ModelCmp4b._add_one_to_key_(knownfiles, src_file)
+
+                            filenamefrag = ModelCmp4b._path_to_fragments_with_file(src_file)[-1]
+
+                            middlepart = frags_without_file[len(prefixkey):]
+                            if len(middlepart)==0:
+                                pathsep = ""
+                            else:
+                                pathsep = "\\"
+
+                            # (44+len(pair[PAIR][0])),
+                            print(" "*3,
+                                  rt.setfg(CLIGHTGREEN)+FILEOP2STR[ev[TYPE]],
+                                  rt.setfg(CNORM),ev[ID],
+                                  rt.setfg(CDARK)+prefix+
+                                  rt.setfg(CVIO2)+pathsep+"\\".join(middlepart)+
+                                  rt.setfg(CNORM)+"\\"+filenamefrag,
+                                  rt.resetfg() )
+
+
+    def find_files_for_prefix(self, pair, tupl, resultverbosity):
+        prefixkey = tupl[0]
+        count = tupl[1]
+
+        prefix = "\\"+"\\".join(prefixkey)
+
+        if count==0:
+            print("BUG! searching for prefix", prefix,"but expecting 0 files?")
+            exit(1)
+
+        if resultverbosity!= 61:
+            print(" "*(18),  #+len(pair[PAIR][0])),      # 53
+                  rt.setfg(CTURQ), prefix,
+                  rt.setfg(CDARK), " x"+str(count),
+                  rt.resetfg() )
+
+        if resultverbosity==60:
+            return
+
+        if resultverbosity==69:
+            for tupl in sorted(pair[MYDIR_PREFIX][prefixkey]):
+                print(rt.setfg(CVIO1)," "*20 + \
+                      str(tupl)+"  x"+str(pair[MYDIR_PREFIX][prefixkey][tupl]) )
+
+        resprox = self.dr.read_sql(pair[FIRST_EVENT], pair[LAST_EVENT])
+        if int(resprox.rowcount)==0:
+            print("BUG! queried for events in", pair[FIRST_EVENT], "to", pair[LAST_EVENT], "but got 0 events?")
+            exit(1)
+
+        events_toread = int(resprox.rowcount)
+
+        knownfiles = {}
+        allprocessids = set()
+
+        while events_toread>0:
+            ev = row2dict(resprox.fetchone())
+            if ev[TYPE_ID] == FILE:
+                Filter.run_filters(ev)
+
+                fileop   = ev[TYPE]
+
+                src_file = ev[SRC_FILE_NAME]
+                self._find_files_for_file_(src_file, prefix, prefixkey, ev, pair, knownfiles, allprocessids, resultverbosity)
+
+
+                if fileop == RENAME:
+                    dst_file = ev[DST_FILE_NAME]
+                    self._find_files_for_file_(dst_file, prefix, prefixkey, ev, pair, knownfiles, allprocessids, resultverbosity)
+
+            events_toread -=1
+
+
+        if resultverbosity == 69:
+            filescomment = " "
+        else:
+            filescomment = " (only first access listed) "
+
+
+        procs = " ".join(map(str,sorted(allprocessids)))
+        if len(allprocessids)<9:
+            # (12+len(pair[PAIR][0]))
+            print(rt.setfg(CDARKGREEN),
+                  " "*(4)+"found", len(knownfiles), "files"+filescomment+"in", len(allprocessids), "executions:",
+                  rt.setfg(CLIGHTGREEN), procs)
+        else:
+            print(rt.setfg(CDARKGREEN),
+                  " "*(4)+"found", len(knownfiles), "files"+filescomment+"in", len(allprocessids), "executions:",
+                  rt.setfg(CLIGHTGREEN), "first exe:", sorted(allprocessids)[0],
+                                         " ... last exe:"+rt.setfg(CLIGHTGREEN), sorted(allprocessids)[-1] )
+
+
+    def pretty_print_for_humans(self, resultverbosity):
+        same_asym  = []
+        fuz_asym   = []
+        unique     = []
+        allpairs_tuple = []
+        allpairs_pairs = {}
+
+        for looppair in sorted(self.pairs_same):
+            pair = self.pairs_same[looppair]
+            if pair[EVAL_TYPE] == TSAME_ASYM:
+                same_asym.append(looppair)
+                allpairs_tuple.append(looppair)
+                allpairs_pairs[looppair] = pair
+
+        for looppair in sorted(self.pairs_var):
+            pair = self.pairs_var[looppair]
+            if pair[EVAL_TYPE] == TFUZ_ASYM:
+                fuz_asym.append(looppair)
+                allpairs_tuple.append(looppair)
+                allpairs_pairs[looppair] = pair
+            elif pair[EVAL_TYPE] == TUNIQUE:
+                unique.append(looppair)
+                allpairs_tuple.append(looppair)
+                allpairs_pairs[looppair] = pair
+
+        if len(same_asym)==0 and len(fuz_asym)==0 and len(unique)==0:
+            print("nothing interesting here")
+            return
+
+        print("SAME_ASYM:", len(same_asym),
+              " FUZ_ASYM:", len(fuz_asym),
+              " UNIQUE:", len(unique) )
+
+
+        temp = sorted(allpairs_tuple, key= lambda bla: int(allpairs_pairs[bla][FIRST_EVENT]) )
+#        reboots = deepcopy(inreboots)
+
+        print("Pair first seen:         datetime    eventID   parent.exe ===> child.exe      x pair executions")
+
+
+        for looppair in temp:
+            pair = allpairs_pairs[looppair]
+
+
+            if pair[EVAL_TYPE] == TSAME_ASYM or (pair[EVAL_TYPE] == TFUZ_ASYM):
+                typecol = rt.setfg(CORANGE)
+            elif pair[EVAL_TYPE] == TUNIQUE:
+                typecol = rt.setfg(CLIGHTRED)
+            else:
+                typecol = ""
+
+
+            print(rt.setfg(CDARK), str(pair[FIRST_TIME])+" ",
+                  rt.setfg(CNORM), str(pair[FIRST_EVENT])+" ",
+                  rt.setfg(CDARK), pair[PAIR][0],
+                  rt.setfg(CNORM), "===>", typecol, pair[PAIR][1],
+                  rt.setfg(CDARK), "x"+str(len(pair[EXECS])), rt.resetfg() )
+
+            prefixes = self.find_asym_prefixes(pair)
+
+            if len(prefixes)>0:
+                for tupl in prefixes:
+                    # (prefix, count)
+                    self.find_files_for_prefix(pair, tupl, resultverbosity)
+
+        print(rt.resetfg())
+
 
 
     @staticmethod

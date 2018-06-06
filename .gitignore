@@ -5,3 +5,4 @@ __pycache__*
 .stfolder
 .stversions
 db.ini*
+_dockermodule/*.tar.bz2

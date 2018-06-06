@@ -29,7 +29,6 @@ class DatabaseReader4:
         result = self.read_sql_events(event, event)
         return list(result)[0]
 
-
     def read_sql(self, event_from: str, event_to: str):
         resprox = self.db.conn.execute(
             "SELECT * FROM ("+
@@ -52,16 +51,16 @@ class DatabaseReader4:
             "    process_events.command_line,"+
             "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name,"+
 
-            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data"+
+            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data,"+
 #            "    network_events.is_connection_outgoing, network_events.protocol_id,"+
-#            "    network_events.local_ip_address, network_events.local_port, network_events.remote_ip_address, network_events.remote_port"+
+            "    network_events.local_ip_address, network_events.local_port, network_events.remote_ip_address, network_events.remote_port"+
 
             "  FROM events"+
             "    LEFT OUTER JOIN process_events USING (id)"+
             "    LEFT OUTER JOIN file_events USING (id)"+
             "    LEFT OUTER JOIN registry_events USING (id)" +
-#            "   LEFT OUTER JOIN network_events USING (id)" +
-#            "   LEFT OUTER JOIN thread_events USING (id)" +
+            "    LEFT OUTER JOIN network_events USING (id)" +
+            "    LEFT OUTER JOIN thread_events USING (id)" +
             "    LEFT OUTER JOIN events AS parent      ON events.parent_id = parent.id"+
             "    LEFT OUTER JOIN events AS grandparent ON parent.parent_id = grandparent.id"+
             "  WHERE events.type_id = 0"+      # process events
@@ -91,16 +90,16 @@ class DatabaseReader4:
             "    process_events.command_line,"+
             "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name,"+
 
-            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data"+
+            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data,"+
 #            "    network_events.is_connection_outgoing, network_events.protocol_id,"+
-#            "    network_events.local_ip_address, network_events.local_port, network_events.remote_ip_address, network_events.remote_port"+
+            "    network_events.local_ip_address, network_events.local_port, network_events.remote_ip_address, network_events.remote_port"+
 
             "  FROM events"+
             "    LEFT OUTER JOIN process_events USING (id)"+
             "    LEFT OUTER JOIN file_events USING (id)"+
-            "   LEFT OUTER JOIN registry_events USING (id)" +
-#            "   LEFT OUTER JOIN network_events USING (id)" +
-#            "   LEFT OUTER JOIN thread_events USING (id)" +
+            "    LEFT OUTER JOIN registry_events USING (id)" +
+            "    LEFT OUTER JOIN network_events USING (id)" +
+            "    LEFT OUTER JOIN thread_events USING (id)" +
             "    LEFT OUTER JOIN events AS parent      ON events.parent_id = parent.id"+
             "    LEFT OUTER JOIN events AS grandparent ON parent.parent_id = grandparent.id"+
             "  WHERE events.type_id!=0 "+     # not process events (!=0),
@@ -113,6 +112,32 @@ class DatabaseReader4:
             ") AS x"+
             " ORDER BY x.id ASC" )
         return resprox
+
+
+
+
+
+    def find_first_event_on_or_after_time(self, time: str) -> DataFrame:
+        df = pd.read_sql(
+            "SELECT id,time FROM events"+
+               " WHERE time >= '"+time+"' AND"+
+                     " events."+self.db.hostname_in_events+" =" + str(self.host) +
+            "  ORDER BY id ASC LIMIT 1",
+            self.db.engine)
+        df.set_index('id', inplace=True)
+        return df
+
+
+    def find_first_event_before_time(self, time:str) -> DataFrame:
+        df = pd.read_sql(
+            "SELECT id,time FROM events"+
+               " WHERE time < '"+time+"' AND"+
+                     " events."+self.db.hostname_in_events+" =" + str(self.host) +
+            "  ORDER BY id DESC LIMIT 1",
+            self.db.engine)
+        df.set_index('id', inplace=True)
+        return df
+
 
 
 

@@ -12,6 +12,7 @@ from r4.model_cmp4b import ModelCmp4b
 from r4.modeltemplate import ModelTemplate
 from r4.runsql4 import RunSQL4
 from util.config import Config
+from util.conv import parse_datetimestring_to_dt, dt_to_str
 import time
 
 from util.plotme import Plotme
@@ -33,6 +34,9 @@ def getmodel4(thismodel: str) -> ModelTemplate:
 
     else:
         print("Error! unknown model: " + thismodel)
+        print("Choose one of:")
+        print("cmp4")
+        print("cmp4b")
         exit(1)
 
 
@@ -57,10 +61,10 @@ class CmdRun(CommandTemplate):
         parser.add_argument("-m", metavar="modelname", dest='inmodel', required=False,
                             help="run with this model")
 
-        parser.add_argument("-r1", metavar=('num','num'), dest='inrange1', nargs='+', required=True,
+        parser.add_argument("-r1", metavar=('xxx','xxx'), dest='inrange1', nargs='+', required=True,
                             help="first, last event (0 0 for NOP)")
 
-        parser.add_argument("-r2", metavar=('num','num'), dest='inrange2', nargs='+', required=True,
+        parser.add_argument("-r2", metavar=('xxx','xxx'), dest='inrange2', nargs='+', required=True,
                             help="first, last event (0 0 for NOP)")
 
         parser.add_argument("-quiet", dest='quiet',
@@ -69,6 +73,10 @@ class CmdRun(CommandTemplate):
 
         parser.add_argument("-res", metavar="num", dest='result', required=False,
                             help="result number (0 for help)")
+
+        parser.add_argument("-fromreboot", dest='infromreboot',
+                            action='store_true', required=False,
+                            help="enforce that processing starts from first reboot")
 
 #        parser.add_argument("-pcases", metavar="file.png", dest='pcases', required=False,
 #                            help="dump .png plot of 7 cases")
@@ -105,25 +113,33 @@ class CmdRun(CommandTemplate):
 
         return True
 
-        # # if no range passed use min/max event of database
-        # if not inrange:
-        #     fromid1 = int(db.stat[MIN_ID])
-        #     toid1   = int(db.stat[MAX_ID])
-        # else:
-        #     fromid1 = int(inrange[0])
-        #     toid1   = int(inrange[1])
-        #
-        # if not quiet:
-        #     print("processing", fromid1, "-", toid1)
-        #     print("")
-        #
-        # return (inrange[0], inrange[1])
+
+    def _convert_start_time_to_event_number_(self, dr: DatabaseReader4, host, eventid, quiet):
+        astime = parse_datetimestring_to_dt(eventid)
+        df = dr.find_first_event_on_or_after_time(dt_to_str(astime) )
+        if df.size==0:
+            print("BUG? did not find any events after",dt_to_str(astime), "for host", host); exit(1)
+        if not quiet:
+            print("Host", host, "From",dt_to_str(astime))
+            print("Host", host, " -->",df['time'][0], df.index[0])
+        return df.index[0]
+
+
+    def _convert_end_time_to_event_number_(self, dr: DatabaseReader4, host, eventid, quiet):
+        astime = parse_datetimestring_to_dt(eventid)
+        df = dr.find_first_event_before_time(dt_to_str(astime) )
+        if df.size==0:
+            print("BUG? did not find any events before",dt_to_str(astime), "for host", host); exit(1)
+        if not quiet:
+            print("Host", host, "  To",dt_to_str(astime))
+            print("Host", host, " -->",df['time'][0], df.index[0])
+        return df.index[0]
 
 
     def run(self, indb1=None,    indb2=None,
                inrange1=None, inrange2=None,
             result=None, quiet=False,
-            inmodel=None,
+            inmodel=None, infromreboot=False,
             pcases=None, pratio=None,
             **kwargs):
 
@@ -135,7 +151,10 @@ class CmdRun(CommandTemplate):
         if len(inrange1) % 2 ==1: print("error: invalid range1"); exit(1)
         if len(inrange2) % 2 ==1: print("error: invalid range2"); exit(1)
         if len(inrange1) != len(inrange2):
-            print("error: ranges of different length not supported (yet)"); exit(1)
+            print("error: ranges of different length not supported (yet)")
+            print(inrange1)
+            print(inrange2)
+            exit(1)
 
         host1 = indb1[1]
         host2 = indb2[1]
@@ -147,10 +166,10 @@ class CmdRun(CommandTemplate):
         dr2 = DatabaseReader4(db2, host2)
 
         m1temp = getmodel4(inmodel)
-                        # hostid,   name
-        model1 = m1temp(str(host1), str(indb1[0]), [11,149], dr1)
+                        # hostid    name           colors    dr
+        model1 = m1temp(str(host1), str(indb1[0]), [11,149], dr1, fromreboot=infromreboot, quiet=quiet)
         m2temp = getmodel4(inmodel)
-        model2 = m2temp(str(host2), str(indb2[0]), [14,36],  dr2)
+        model2 = m2temp(str(host2), str(indb2[0]), [14,36],  dr2, fromreboot=infromreboot, quiet=quiet)
 
         model1.set_other(model2)
         model2.set_other(model1)
@@ -166,12 +185,25 @@ class CmdRun(CommandTemplate):
             range1= [inrange1.pop(0), inrange1.pop(0)]
             range2= [inrange2.pop(0), inrange2.pop(0)]
 
-            self._sanity_check_range_(db1, range1, quiet)
-            self._sanity_check_range_(db2, range2, quiet)
+            if range1[0].isdigit() and range1[1].isdigit():
+                self._sanity_check_range_(db1, range1, quiet)
+            else:
+                if not range1[0].isdigit():
+                    range1[0] = self._convert_start_time_to_event_number_(dr1, host1, range1[0], quiet)
+                if not range1[1].isdigit():
+                    range1[1] = self._convert_end_time_to_event_number_(dr1, host1, range1[1], quiet)
+
+            if range2[0].isdigit() and range2[1].isdigit():
+                self._sanity_check_range_(db2, range2, quiet)
+            else:
+                if not range2[0].isdigit():
+                    range2[0] = self._convert_start_time_to_event_number_(dr2, host2, range2[0], quiet)
+                if not range2[1].isdigit():
+                    range2[1] = self._convert_end_time_to_event_number_(dr2, host2, range2[1], quiet)
 
             run.run_events(model1, model2,
                            [ int(range1[0]), int(range1[1]) ],
-                           [ int(range2[0]), int(range2[1]) ] )
+                           [ int(range2[0]), int(range2[1]) ], quiet)
 
 
         if result:

@@ -53,11 +53,11 @@ class ModuleApi2:
         self.dr1 = DatabaseReader4(self.db1, str(host1) )
         self.dr2 = DatabaseReader4(self.db2, str(host2) )
 
-        # model is always "cmp4b" for nop
-        # so NOP this :-)
-        #                      hostid    hostname
+        # model is always "cmp4b"
+        # so NOP this for now :-)
+        #                           hostid    hostname        colors    dr
         self.model1 = ModelCmp4b(str(host1), "fixmehostname", [11,149], self.dr1)   # hostid, name
-        self.model2 = ModelCmp4b(str(host2), "fixmehostname", [14,36],  self.dr2)    # hostid, name
+        self.model2 = ModelCmp4b(str(host2), "fixmehostname", [14,36],  self.dr2)   # hostid, name
 
         self.model1.set_other(self.model2)
         self.model2.set_other(self.model1)

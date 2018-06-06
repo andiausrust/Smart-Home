@@ -46,17 +46,17 @@ def parse_datetimestring_to_dt(instring: str) -> dt.datetime:
     # with microseconds?
     m = re.search('(\d\d\d\d\d\d)$', cleaned)
     if m:
-        return dt.datetime.strptime(cleaned, '%Y-%m-%d %H:%M:%S.%f')
+        return dt.datetime.strptime(cleaned, '%Y-%m-%d.%H:%M:%S.%f')
 
     # with seconds?
-    m = re.search(' (\d\d:\d\d:\d\d)$', cleaned)
+    m = re.search('.(\d\d:\d\d:\d\d)$', cleaned)
     if m:
-        return dt.datetime.strptime(cleaned, '%Y-%m-%d %H:%M:%S')
+        return dt.datetime.strptime(cleaned, '%Y-%m-%d.%H:%M:%S')
 
     # with minutes?
-    m = re.search(' (\d\d:\d\d)$', cleaned)
+    m = re.search('.(\d\d:\d\d)$', cleaned)
     if m:
-        return dt.datetime.strptime(cleaned, '%Y-%m-%d %H:%M')
+        return dt.datetime.strptime(cleaned, '%Y-%m-%d.%H:%M')
 
     # just date?
     m = re.search('^(\d\d\d\d-\d\d-\d\d)', cleaned)

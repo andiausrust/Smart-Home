@@ -57,6 +57,20 @@ class CmdRaw(CommandTemplate):
                             help="apply filtering")
 
 
+        parser.add_argument("-robert", dest='robert',
+                            action='store_true', required=False,
+                            help="dump in Robert's special format")
+
+        parser.add_argument("-nopath", dest='nopath',
+                            action='store_true', required=False,
+                            help="cut path from parent executables")
+
+        parser.add_argument("-nochildpath", dest='nochildpath',
+                            action='store_true', required=False,
+                            help="cut path from child executables")
+
+
+
         parser.add_argument("-quiet", dest='quiet',
                             action='store_true', required=False,
                             help="only print content of events and nothing else")
@@ -65,9 +79,71 @@ class CmdRaw(CommandTemplate):
         parser.set_defaults(cls=CmdRaw)
 
 
+    def do_robert(self, row, nopath, nochildpath):
+        parent_process_name = row[PARENT_PROCESS_NAME]
+        if not parent_process_name:
+            parent_process_name = "UNKNOWN"
+
+        if nopath:
+            i = parent_process_name.rfind("\\")
+            if i is not -1:
+                parent_process_name = parent_process_name[i+1:]
+
+        parent_id = row[PARENT_ID]
+        if not parent_id:
+            parent_id = str(-1)
+
+        process_name = row[PROCESS_NAME]
+        if not process_name:
+            process_name = "UNKNOWN"
+
+        if nochildpath:
+            i = process_name.rfind("\\")
+            if i is not -1:
+                process_name = process_name[i+1:]
+
+
+        id = str(row[ID])
+
+
+        leadid = str(row[ID])+"  "
+        leadid = ""
+
+        if row[TYPE_ID] == PROCESS:
+            print(leadid+parent_process_name+"-"+parent_id+";"+"PROCESS-CREATE"+";"+process_name)
+
+        elif row[TYPE_ID] == FILE:
+            front = leadid+parent_process_name+"-"+parent_id+";"
+
+            if row[TYPE] == CREATE:
+                print(front+"FILE-CREATE;"+row[SRC_FILE_NAME])
+            elif row[TYPE] == READ:
+                print(front+"FILE-READ;"+row[SRC_FILE_NAME])
+            elif row[TYPE] == WRITE:
+                print(front+"FILE-WRITE;"+row[SRC_FILE_NAME])
+            elif row[TYPE] == DELETE:
+                print(front+"FILE-DELETE;"+row[SRC_FILE_NAME])
+
+        elif row[TYPE_ID] == REGISTRY:
+            front = leadid+parent_process_name+"-"+parent_id+";"
+
+            if row[TYPE_STRING] == REG_SET:
+                print(front+"REGISTRY-SET"+";"+row[PATH]+"\\"+row[KEY])
+            elif row[TYPE_STRING] == REG_CREATE:
+                print(front+"REGISTRY-CREATE"+";"+row[PATH])
+
+        elif row[TYPE_ID] == NETWORK:
+            front = leadid+parent_process_name+"-"+parent_id+";"
+
+            print(front+"NETWORK-OPEN"+";"+row[REMOTE_IP_ADDRESS]+"-"+str(row[REMOTE_PORT]))
+
+        else:
+            pass
+
+
     def run(self, db=False, inrange=None, inhost=None,
             print_proc=False, print_parent=False, print_cmd=False, print_file=False, print_reg=False,
-            filter=False, quiet=False, **kwargs):
+            filter=False, quiet=False, robert=None, nopath=False, nochildpath=False, **kwargs):
         db = Config.get_database(db)
 
         db = Database(db)
@@ -75,7 +151,6 @@ class CmdRaw(CommandTemplate):
             db.print_statistics()
         else:
             db.get_db_stat()
-
 
 #         # find hostnames with valid events
 #         hostdf, hostdict = db.get_hostnames(count_events=False)
@@ -129,25 +204,28 @@ class CmdRaw(CommandTemplate):
                     if filter:
                         Filter.run_filters(row)
 
-                    if row[TYPE_ID] == PROCESS:
-                        if print_proc:
-                            print("P"+row[PROCESS_NAME])
-                        if print_cmd:
-                            print("C"+row[COMMAND_LINE])
-                        if print_parent and row[PARENT_PROCESS_NAME]:
-                            print("p"+row[PARENT_PROCESS_NAME])
-
-                    elif print_file and row[TYPE_ID] == FILE:
-                        print("F"+row[SRC_FILE_NAME])
-
-                        if row[TYPE] == RENAME:
-                            print("F"+row[DST_FILE_NAME])
-
-                    elif print_reg and row[TYPE_ID] == REGISTRY:
-                        print("R"+row[PATH]+'⣿'+row[KEY])
-
+                    if robert:
+                        self.do_robert(row, nopath, nochildpath)
                     else:
-                        pass
+                        if row[TYPE_ID] == PROCESS:
+                            if print_proc:
+                                print("P"+row[PROCESS_NAME])
+                            if print_cmd:
+                                print("C"+row[COMMAND_LINE])
+                            if print_parent and row[PARENT_PROCESS_NAME]:
+                                print("p"+row[PARENT_PROCESS_NAME])
+
+                        elif print_file and row[TYPE_ID] == FILE:
+                            print("F"+row[SRC_FILE_NAME])
+
+                            if row[TYPE] == RENAME:
+                                print("F"+row[DST_FILE_NAME])
+
+                        elif print_reg and row[TYPE_ID] == REGISTRY:
+                            print("R"+row[PATH]+'⣿'+row[KEY])
+
+                        else:
+                            pass
 
                     events_processed +=1
 
