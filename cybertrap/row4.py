@@ -51,7 +51,7 @@ def row2dict(row):
         d[DOMAIN_NAME]       = str(row[DOMAIN_NAME]).lower()
         d[USER_NAME]         = str(row[USER_NAME]).lower()
         d[COMMAND_LINE]      = str(row[COMMAND_LINE]).lower()
-#        d[WORKING_DIRECTORY] = str(row[WORKING_DIRECTORY]).lower()
+        d[WORKING_DIRECTORY] = str(row[WORKING_DIRECTORY]).lower()
 
     elif type_id == THREAD:
         ### FIXME -> check first if database schema changed!

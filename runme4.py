@@ -14,7 +14,7 @@ from sys import argv
 from r4.cmd_version import CmdVersion
 
 if len(argv)>1:
-    if argv[1]=="version":
+    if argv[1]=="version" or argv[1]=="ver":
         CmdVersion.print_versions()
         exit(0)
 

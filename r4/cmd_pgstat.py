@@ -1,5 +1,6 @@
 from pprint import pprint
 
+from cybertrap.dbconst import PID, PROCESS_NAME, SEQUENCE_ID
 from cybertrap.database import Database
 from cybertrap.database_reader4 import DatabaseReader4
 
@@ -51,7 +52,10 @@ class CmdPgStat(CommandTemplate):
         if print_reboots:
             dr = DatabaseReader4(db, "")
             reboots = dr.find_reboots()
+            reboots.drop([PID, PROCESS_NAME, SEQUENCE_ID],axis=1,inplace=True)
+
             if sort_by_host:
-                reboots.sort_values('ct_units_id',inplace=True)
+                reboots.sort_values(['ct_units_id','time'],ascending=[True, True], inplace=True)
+
             print("")
             print(reboots)

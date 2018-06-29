@@ -82,6 +82,9 @@ class Plotme:
         else:
             p = bokeh.layouts.gridplot([[left,middle]])
 
+        bokeh.plotting.show(p)
+
+
 #        if Config.detect_environment() is not SHELL:
 #            return bokeh.plotting.show(p)
 #        else:

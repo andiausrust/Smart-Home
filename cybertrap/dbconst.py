@@ -25,6 +25,8 @@ READ_PAGING  = 7
 MMAP_READ    = 8
 MMAP_READ_WRITE = 9
 MMAP_WRITE   = 10
+RENAME_SRC   = 11  # fake type, not in database
+RENAME_DST   = 12  # fake type, not in database
 
 FILEOP2STR = ['  CRE',
               'READ ',
@@ -36,7 +38,9 @@ FILEOP2STR = ['  CRE',
               'REA_P',
               'MM_RE',
               'MM_RW',
-              'MM_WR']
+              'MM_WR',
+              'REN_S',
+              'REN_D']
 
 # registry ops
 REG_SET    = 0

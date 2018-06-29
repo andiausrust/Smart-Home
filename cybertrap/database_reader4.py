@@ -4,6 +4,7 @@ import pandas as pd
 from pandas import DataFrame
 from pprint import pprint
 from sys import exit
+from sqlalchemy.sql import text
 
 class DatabaseReader4:
     def __init__(self, db: Database, host:str):
@@ -49,6 +50,7 @@ class DatabaseReader4:
             "    process_events.domain_name,"+
             "    process_events.user_name,"+
             "    process_events.command_line,"+
+            "    process_events.working_directory,"+
             "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name,"+
 
             "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data,"+
@@ -88,6 +90,7 @@ class DatabaseReader4:
             "    process_events.domain_name,"+
             "    process_events.user_name,"+
             "    process_events.command_line,"+
+            "    process_events.working_directory,"+
             "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name,"+
 
             "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data,"+
@@ -113,6 +116,64 @@ class DatabaseReader4:
             " ORDER BY x.id ASC" )
         return resprox
 
+
+    def read_sql_file(self, event_from, event_to): # , grandparent_process_name, parent_process_name):
+        # FIXME: either way we have to do the escaping of \ ourselves
+        # FIXME: is this a SQL exploitation possibility?
+
+
+#        where1 = "'%%"+(grandparent_process_name.replace('\\', '\\\\'))+"%%'"
+#        where2 = "'%%"+(parent_process_name.replace('\\', '\\\\'))+"%%'"
+        resprox = self.db.conn.execute("  SELECT" +
+#        s = text("  SELECT" +
+        "    events.id AS id,"+
+        "    events.sequence_id,"+
+        "    events."+self.db.hostname_in_events+","+
+        "    events.type_id,"+
+        "    events.pid,"+
+
+        "    events.process_name,"+
+        "    parent.id                AS parent_id,"+
+        "    parent.process_name      AS parent_process_name,"+
+        "    grandparent.process_name AS grandparent_process_name,"+
+        "    grandparent.id           AS grandparent_id,"+
+
+        "    events.time,"+
+#            "    process_events.domain_name,"+
+#            "    process_events.user_name,"+
+#            "    process_events.command_line,"+
+#            "    process_events.working_directory,"+
+        "    file_events.type AS fileop, file_events.src_file_name, file_events.dst_file_name"+
+
+#            "    registry_events.type_string, registry_events.path, registry_events.key, registry_events.data,"+
+#            "    network_events.is_connection_outgoing, network_events.protocol_id,"+
+#            "    network_events.local_ip_address, network_events.local_port, network_events.remote_ip_address, network_events.remote_port"+
+
+        "  FROM events"+
+#            "    LEFT OUTER JOIN process_events USING (id)"+
+        "    LEFT OUTER JOIN file_events USING (id)"+
+#            "    LEFT OUTER JOIN registry_events USING (id)" +
+#            "    LEFT OUTER JOIN network_events USING (id)" +
+#            "    LEFT OUTER JOIN thread_events USING (id)" +
+        "    LEFT OUTER JOIN events AS parent      ON events.parent_id = parent.id"+
+        "    LEFT OUTER JOIN events AS grandparent ON parent.parent_id = grandparent.id"+
+        "  WHERE events.type_id = 4"+      # only file events
+
+        "    AND events.id>="+str(event_from) +
+        "    AND events.id<="+str(event_to) +
+        "    AND events."+self.db.hostname_in_events+" =" + str(self.host) +
+##        "    AND  grandparent.process_name ILIKE :w1 "+
+##        "    AND  parent.process_name ILIKE :w2 "+
+#        "    AND  grandparent.process_name ILIKE "+where1+
+#        "    AND  parent.process_name ILIKE "+where2+
+        " ORDER BY events.id ASC")
+
+#        resprox = self.db.conn.execute(s,
+#                                       w1='%'+grandparent_process_name.replace('\\', '\\\\')+'%',
+#                                       w2='%'+parent_process_name.replace('\\', '\\\\')+'%')
+
+
+        return resprox
 
 
 
