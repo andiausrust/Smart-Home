@@ -15,7 +15,7 @@ from util.config import Config
 from util.conv import parse_datetimestring_to_dt, dt_to_str
 import time
 
-from util.plotme import Plotme
+#from util.plotme import Plotme
 
 
 def getmodel4(thismodel: str) -> ModelTemplate:
@@ -78,13 +78,6 @@ class CmdRun(CommandTemplate):
                             action='store_true', required=False,
                             help="enforce that processing starts from first reboot")
 
-#        parser.add_argument("-pcases", metavar="file.png", dest='pcases', required=False,
-#                            help="dump .png plot of 7 cases")
-
-#        parser.add_argument("-pratio", metavar="file.png", dest='pratio', required=False,
-#                            help="dump .png plot of benigh vs. supicious ratio")
-
-
         parser.set_defaults(cls=CmdRun)
 
 
@@ -105,7 +98,7 @@ class CmdRun(CommandTemplate):
 
         if int(inrange[1]) !=0:
             if int(db.stat[MAX_ID])<int(inrange[1]):
-                print("sanity check:", inrange[0],"max db event",db.stat[MAX_ID], "is smaller than max range", inrange[1])
+                print("sanity check:", "max db event", db.stat[MAX_ID], "is smaller than max range", inrange[1])
                 exit(1)
 
         if not quiet:
@@ -113,8 +106,8 @@ class CmdRun(CommandTemplate):
 
         return True
 
-
-    def _convert_start_time_to_event_number_(self, dr: DatabaseReader4, host, eventid, quiet):
+    @staticmethod
+    def _convert_start_time_to_event_number_(dr: DatabaseReader4, host, eventid, quiet):
         astime = parse_datetimestring_to_dt(eventid)
         df = dr.find_first_event_on_or_after_time(dt_to_str(astime) )
         if df.size==0:
@@ -124,8 +117,8 @@ class CmdRun(CommandTemplate):
             print("Host", host, " -->",df['time'][0], df.index[0])
         return df.index[0]
 
-
-    def _convert_end_time_to_event_number_(self, dr: DatabaseReader4, host, eventid, quiet):
+    @staticmethod
+    def _convert_end_time_to_event_number_(dr: DatabaseReader4, host, eventid, quiet):
         astime = parse_datetimestring_to_dt(eventid)
         df = dr.find_first_event_before_time(dt_to_str(astime) )
         if df.size==0:
@@ -189,17 +182,17 @@ class CmdRun(CommandTemplate):
                 self._sanity_check_range_(db1, range1, quiet)
             else:
                 if not range1[0].isdigit():
-                    range1[0] = self._convert_start_time_to_event_number_(dr1, host1, range1[0], quiet)
+                    range1[0] = CmdRun._convert_start_time_to_event_number_(dr1, host1, range1[0], quiet)
                 if not range1[1].isdigit():
-                    range1[1] = self._convert_end_time_to_event_number_(dr1, host1, range1[1], quiet)
+                    range1[1] = CmdRun._convert_end_time_to_event_number_(dr1, host1, range1[1], quiet)
 
             if range2[0].isdigit() and range2[1].isdigit():
                 self._sanity_check_range_(db2, range2, quiet)
             else:
                 if not range2[0].isdigit():
-                    range2[0] = self._convert_start_time_to_event_number_(dr2, host2, range2[0], quiet)
+                    range2[0] = CmdRun._convert_start_time_to_event_number_(dr2, host2, range2[0], quiet)
                 if not range2[1].isdigit():
-                    range2[1] = self._convert_end_time_to_event_number_(dr2, host2, range2[1], quiet)
+                    range2[1] = CmdRun._convert_end_time_to_event_number_(dr2, host2, range2[1], quiet)
 
             run.run_events(model1, model2,
                            [ int(range1[0]), int(range1[1]) ],
@@ -212,17 +205,3 @@ class CmdRun(CommandTemplate):
 
             print("\n  ", indb2[1], "===>", model2.hostname + ":")
             model2.print_result(result)
-
-#        if pcases is not None:
-#            pass
-#            Plotme.plot_to_png(
-#                [model1,model2],
-#                [model1.hostnameid,model2.hostnameid],
-#                "^c", pcases)
-
-#        if pratio is not None:
-#            pass
-#            Plotme.plot_to_png(
-#                [model1,model2],
-#                [model1.hostnameid,model2.hostnameid],
-#                "^percent", pratio)

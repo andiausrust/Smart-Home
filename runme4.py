@@ -26,6 +26,8 @@ from r4.cmd_pgstat import CmdPgStat
 from r4.cmd_raw import CmdRaw
 from r4.cmd_run import CmdRun
 from r4.cmd_pgmeasure import CmdPgMeasure
+from r4.cmd_self import CmdSelf
+
 
 def add_r4_commands(subparsers):
     CmdVersion.add_subparser(subparsers)
@@ -33,7 +35,7 @@ def add_r4_commands(subparsers):
     CmdRaw.add_subparser(subparsers)
     CmdRun.add_subparser(subparsers)
     CmdPgMeasure.add_subparser(subparsers)
-
+    CmdSelf.add_subparser(subparsers)
 
 import argparse
 from sys import exit

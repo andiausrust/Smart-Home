@@ -2,7 +2,14 @@ from configparser import ConfigParser
 from os import get_terminal_size, environ
 from sys import exit, version
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    print("ModuleNotFoundError: No module named 'pandas'")
+    print("")
+    print('Is this the correct Python execution environment?')
+    exit(1)
+
 import re
 from pathlib import Path
 

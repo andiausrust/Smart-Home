@@ -42,7 +42,7 @@ class CmdVersion(CommandTemplate):
                 module = import_module(i[1])
                 version = module.__version__
             except ImportError:
-                version = "...not installed!"
+                version = "...not installed?"
             print("{0:>11} {1:}".format(i[0], version))
 
 

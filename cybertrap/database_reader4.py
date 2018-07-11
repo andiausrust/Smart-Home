@@ -30,6 +30,7 @@ class DatabaseReader4:
         result = self.read_sql_events(event, event)
         return list(result)[0]
 
+
     def read_sql(self, event_from: str, event_to: str):
         resprox = self.db.conn.execute(
             "SELECT * FROM ("+
@@ -199,7 +200,17 @@ class DatabaseReader4:
         df.set_index('id', inplace=True)
         return df
 
+    def find_first_event_for_host(self):
+        df = pd.read_sql("SELECT id,time FROM events"+
+               " WHERE "+"events."+self.db.hostname_in_events+" ="+str(self.host)+" ORDER BY id ASC LIMIT 1", self.db.engine)
+        df.set_index('id', inplace=True)
+        return df
 
+    def find_last_event_for_host(self):
+        df = pd.read_sql("SELECT id,time FROM events"+
+               " WHERE "+"events."+self.db.hostname_in_events+" ="+str(self.host)+" ORDER BY id DESC LIMIT 1", self.db.engine)
+        df.set_index('id', inplace=True)
+        return df
 
 
     def find_reboots(self) -> DataFrame:   #,hostid="hostname_id"

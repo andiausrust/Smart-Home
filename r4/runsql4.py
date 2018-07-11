@@ -8,7 +8,7 @@ import time
 from pprint import pprint
 
 # from util.conv import dt_clear_hour, dt_approx_by_delta
-from r4.model_cmp4 import ModelCmp4
+from r4.model_cmp4b import ModelCmp4b
 from r4.modeltemplate import ModelTemplate
 from r4.modelconst import RELTIME
 from util.conv import printNiceTimeDelta
@@ -21,7 +21,7 @@ class RunSQL4:
 
 
                                            # in generic case is a ModelTemplate
-    def run_events(self, model1,   model2: ModelCmp4,
+    def run_events(self, model1,   model2: ModelCmp4b,
                        inrange1, inrange2: list,
                    quiet=False):
 
@@ -60,16 +60,17 @@ class RunSQL4:
         # send query to databases
         if inrange1:
             resprox1 = self.dr1.read_sql(str(fromid1), str(toid1))
+            model1.ranges_consumed.append( [fromid1, toid1] )
             events_total1 = int(resprox1.rowcount)
             if not quiet:
                 print("after SELECT1: ", resprox1.rowcount, "events", "("+str(int(resprox1.rowcount/ (time.time()-time_start))), "events/s)")
 
         if inrange2:
             resprox2 = self.dr2.read_sql(str(fromid2), str(toid2))
+            model2.ranges_consumed.append( [fromid2, toid2] )
             events_total2 = int(resprox2.rowcount)
             if not quiet:
                 print("after SELECT2: ", resprox2.rowcount, "events", "("+str(int(resprox2.rowcount/ (time.time()-time_start))), "events/s)")
-
 
         if not quiet:
             print(str(events_total1+events_total2), "total events to process")

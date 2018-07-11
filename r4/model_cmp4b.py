@@ -76,7 +76,9 @@ class ModelCmp4b(ModelTemplate):
 
         self.tick_start = None
         self.tick_end   = None
-        self.tick_delta = timedelta(seconds=60) *10  # 60*3    # ticker for model internal periodic tasks
+        self.tick_delta = timedelta(seconds=60) *30  # 60*3    # ticker for model internal periodic tasks
+
+        self.ranges_consumed = []
 
 
     def set_other(self, othermodel):
@@ -299,7 +301,7 @@ class ModelCmp4b(ModelTemplate):
             parent_binary = r"\REBOOT"
 
             if int(ev[ID]) != self.rebootid:
-                print("BUG in data?", evid, "event parent is None, but my last rebootid is", self.rebootid)
+                print("BUG in data?", evid, "event parent is None") #, but my last rebootid is", self.rebootid)
         else:
             parent_id = int(parent_id)
 
@@ -783,8 +785,8 @@ class ModelCmp4b(ModelTemplate):
                 exit(1)
 
 
-            if ev[TIME] > self.tick_start:
-                self.one_tick(ev)
+#            if ev[TIME] > self.tick_start:
+#                self.one_tick(ev)
 
             self.last_event_consumed = ev
 
@@ -1136,6 +1138,7 @@ class ModelCmp4b(ModelTemplate):
             print("69 - suspicious pairs summary - you know want you want")
             print("70 - suspicious pairs summary - event ordered")
             print("71 - suspicious pairs summary - event ordered with event details")
+            print("72 - direct mode for events details only")
             pass
 
 
@@ -1196,7 +1199,7 @@ class ModelCmp4b(ModelTemplate):
             self.do_evaluation(force=True)
 
             self.pretty_print_for_humans(result)
-            print("")
+            print(rt.resetfg())
 
 
 
@@ -1763,19 +1766,7 @@ class ModelCmp4b(ModelTemplate):
                             else:
                                 knownfiles.append( [int(ev[ID]), ev, ("",         ""                            , "\\" + src_file) ] )
 
-                            exeids.add(int(ev[PARENT_ID]))
-#                            typecol = self._suspicioustype_to_col(pair)
-#                            print(
-#                                  rt.setfg(CNORM), ev[ID],
-#                                  rt.setfg(CDARK), pair[PAIR][0]+rt.setfg(CDARK)+'('+str(ev[GRANDPARENT_ID])+')',
-#                                  rt.setfg(CNORM)+"==>"+typecol,
-#                                  pair[PAIR][1]+rt.setfg(CDARK)+'('+str(ev[PARENT_ID])+')',
-#                                  rt.setfg(CNORM)+"-->",
-#                                  rt.setfg(CLIGHTGREEN) + FILEOP2STR[ev[TYPE]],
-#                                  rt.setfg(CDARK) + prefixtext +
-#                                  rt.setfg(CVIO2) + pathsep +"\\".join(middlepart) +
-#                                  rt.setfg(CNORM) +"\\" + filenamefrag,
-#                                  rt.resetfg() )
+                            exeids.add(int(ev[PARENT_ID]))  # and remember our parent
 
 
     def _print_wiped_(self, pair, hasprefixes):
@@ -1795,71 +1786,108 @@ class ModelCmp4b(ModelTemplate):
 
 
     def find_files_for_all_sections(self, first_event, last_event, allsections):
-        #          0                 1            2     3       4            5           6            7
+        #          0                 1            2   3minexeid   4    5files         6            7
         # (pair[FIRST_EVENT], pair[LAST_EVENT], pair, None, pretupl,  [accesses], set(parentids), set(uniqfiles) )
                                                      #   (prefixkeytupl, count, prefixintext)
-        resprox = self.dr.read_sql_file(first_event, last_event)
-        if int(resprox.rowcount)==0:
-            print(rt.resetfg(),"BUG! queried for events in", str(first_event), "to", str(last_event), "but got 0 file events?")
-            exit(1)
+        localranges = deepcopy(self.ranges_consumed)
+#        pprint(localranges)
 
-        events_toread = int(resprox.rowcount)
+        while True:  # optimize ranges to re-run
+            if len(localranges)==0:
+                break
 
-        sections_done = []
+            if localranges[0][1]<first_event:
+                r = localranges.pop(0)
+#                print("removed front range:", r)
+                continue    # try again, there may be more than one
 
-        while events_toread>0:
-            ev = row2dict(resprox.fetchone())
-            evid = int(ev[ID])
-            toremove = []
+            if localranges[0][0]<first_event:
+#                print("adjusted start from:", localranges[0][0], "to", first_event)
+                localranges[0][0] = first_event
 
-            i = 0
-            for index, item in enumerate(allsections):
-                item = allsections[index]
-                if item[1]<evid:
-                    toremove.append(index)
-                    continue
+            if localranges[-1][0]>last_event:
+                r = localranges.pop(len(localranges)-1)
+#                print("removed end range:", r)
+                continue    # try again, there may be more than one
 
-                if evid>=item[0]:
-#                    if item[4] is None:     # no file accesses -> immediately done
-#                        toremove.append(index)
-#                        continue
+            if last_event<localranges[-1][1]:
+#                print("adjusted end from:", localranges[0][1], "to", last_event)
+                localranges[-1][1]=last_event
 
-                    Filter.run_filters(ev)
-                    pair = item[2]
+            break   # if we got here, all ranges should be fixed
 
-                    if ev[GRANDPARENT_PROCESS_NAME] == pair[PAIR][0] and \
-                            ev[PARENT_PROCESS_NAME] == pair[PAIR][1]:
+#        pprint(localranges)
 
-                            knownfiles  = item[5]
-                            exeids      = item[6]
-                            uniquefiles = item[7]
+        while len(localranges)>0:
+            first_event, last_event = localranges.pop(0)
+#            print("querying db for details in", first_event, "--", last_event)
 
-                            fileop   = ev[TYPE]
-                            src_file = ev[SRC_FILE_NAME]
+            resprox = self.dr.read_sql_file(first_event, last_event)
+            if int(resprox.rowcount)==0:
+                print(rt.resetfg(),"WARNING! queried for events in", str(first_event), "to", str(last_event), "but got 0 file events?")
+                continue
 
-                            if fileop == RENAME:
-                                ev[TYPE] = RENAME_SRC
+            events_toread = int(resprox.rowcount)
 
-                            for prefix in item[4]:
-                                prefixkey  = prefix[0]
-                                prefixtext = prefix[2]
-                                self._match_file_to_section_(src_file, prefixtext, prefixkey, ev, pair, knownfiles, exeids, uniquefiles)
+            sections_done = []
 
-                            if fileop == RENAME:
-                                dst_file = ev[DST_FILE_NAME]
-                                ev[TYPE] = RENAME_DST
+            while events_toread>0:
+                ev = row2dict(resprox.fetchone())
+                evid = int(ev[ID])
+                toremove = []
+
+                i = 0
+                for index, item in enumerate(allsections):  # look for event in all sections
+                    item = allsections[index]
+
+                    if item[1]<evid:           # this section is done, remove it
+                        toremove.append(index)
+                        continue
+
+                    if evid>=item[0]:   # may be in this section
+
+    #                    if item[4] is None:     # no file accesses -> immediately done
+    #                        toremove.append(index)
+    #                        continue
+
+                        Filter.run_filters(ev)
+                        pair = item[2]
+
+                        # is this section the correct pair?
+                        if ev[GRANDPARENT_PROCESS_NAME] == pair[PAIR][0] and \
+                                ev[PARENT_PROCESS_NAME] == pair[PAIR][1]:
+
+                                knownfiles  = item[5]
+                                exeids      = item[6]
+                                uniquefiles = item[7]
+
+                                fileop   = ev[TYPE]
+                                src_file = ev[SRC_FILE_NAME]
+
+                                if fileop == RENAME:
+                                    ev[TYPE] = RENAME_SRC
 
                                 for prefix in item[4]:
                                     prefixkey  = prefix[0]
                                     prefixtext = prefix[2]
-                                    self._match_file_to_section_(dst_file, prefixtext, prefixkey, ev, pair, knownfiles, exeids, uniquefiles)
+                                    self._match_file_to_section_(src_file, prefixtext, prefixkey, ev, pair, knownfiles, exeids, uniquefiles)
+
+                                if fileop == RENAME:
+                                    dst_file = ev[DST_FILE_NAME]
+                                    ev[TYPE] = RENAME_DST
+
+                                    for prefix in item[4]:
+                                        prefixkey  = prefix[0]
+                                        prefixtext = prefix[2]
+                                        self._match_file_to_section_(dst_file, prefixtext, prefixkey, ev, pair, knownfiles, exeids, uniquefiles)
 
 
-            if len(toremove)>0:
-                for index in reversed(toremove):
-                    sections_done.append( allsections.pop(index) )
+                if len(toremove)>0:
+                    for index in reversed(toremove):
+                        sections_done.append( allsections.pop(index) )
 
-            events_toread -=1
+                events_toread -=1
+
 
         while len(allsections)>0:
             sections_done.append( allsections.pop(0) )
@@ -1989,10 +2017,11 @@ class ModelCmp4b(ModelTemplate):
             print("nothing interesting here")
             return
 
-        print("SAME_ASYM:", len(same_asym),
+        print("same:", len(self.pairs_same),
+              "var:", len(self.pairs_var), "and there are ",
+              "SAME_ASYM:", len(same_asym),
               " FUZ_ASYM:", len(fuz_asym),
               " UNIQUE:", len(unique) )
-
 
 
         if resultverbosity>59 and resultverbosity<70:
@@ -2019,8 +2048,10 @@ class ModelCmp4b(ModelTemplate):
                         self.find_files_for_prefix(pair, tupl, resultverbosity)
 
         else:   #  >=70
+            # global range
             first_event = None
             last_event = None
+
             allsections = []
             sections_no_prefix = []
 
@@ -2031,7 +2062,7 @@ class ModelCmp4b(ModelTemplate):
 
             for looppair in pairrelsbylastevent:
                 pair = allpairs_pairs[looppair]
-                # global range
+                # find global range
                 if not first_event:
                     first_event = pair[FIRST_EVENT]
                 else:
@@ -2046,18 +2077,22 @@ class ModelCmp4b(ModelTemplate):
                 prefixes = allpairs_prefixes[looppair]
 
                 if len(prefixes)>0:
-                    #                                           2    3        4   5files  6exeids 7unfiles
+                    #                                           2   3minexeid   4   5files  6exeids 7unfiles
                     allsections.append(
                         [pair[FIRST_EVENT], pair[LAST_EVENT], pair, None, prefixes, [],   set(),  set()] )
                 else:
                     sections_no_prefix.append(
                         [pair[FIRST_EVENT], pair[LAST_EVENT], pair, None,   None,   [],   set(),  set()] )
 
-            print("second database search for details in range:", first_event, "-->", last_event)
-#            pprint(allsections)
+#            print("second database search for details in range:", first_event, "-->", last_event)
 #            print("")
-            donesections = self.find_files_for_all_sections(first_event, last_event, allsections)
-
+#            pprint(self.ranges_consumed)
+#            for section in allsections:
+#                print("SECTION:", section[0], section[1], "---", len(section[4]) )
+            if len(allsections)>0:
+                donesections = self.find_files_for_all_sections(first_event, last_event, allsections)
+            else:
+                donesections = []
 
             for section in sections_no_prefix:
                 donesections.append(section)
@@ -2067,15 +2102,14 @@ class ModelCmp4b(ModelTemplate):
                 if onesection[4] and len(onesection[6])>0:
                     onesection[3] = min(onesection[6])
 
-                else:      # no file events, find our own executions from pair data
+                else:     # no file events, so find our own executions from pair data
                     pair = onesection[2]
                     for tupl in pair[EXECS]:
                         onesection[6].add(tupl[2])
 
                     onesection[3] = min(onesection[6])
-#                    onesection[3] = onesection[0]
 
-
+            # sort by minexeid and print process stats
             for onesection in sorted(donesections, key = lambda bla: bla[3]):
                 pair = onesection[2]
                 typecol = self._suspicioustype_to_col(pair)
@@ -2084,69 +2118,72 @@ class ModelCmp4b(ModelTemplate):
                 execs = onesection[6]
                 uniquefiles = onesection[7]
 
-                print("    ", onesection[3],
-                      rt.setfg(CDARK), pair[PAIR][0],
-                      rt.setfg(CNORM), "===>",
-                      typecol,         pair[PAIR][1],
-                      rt.setfg(CDARK), str(len(execs))+" of "+str(len(pair[EXECS])), "exes,",
-                                       str(len(uniquefiles))+" uniq of "+str(len(files)), "file accesses", rt.resetfg() )
+                if resultverbosity!=72:
+                    print("    ", onesection[3],
+                          rt.setfg(CDARK), pair[PAIR][0],
+                          rt.setfg(CNORM), "===>",
+                          typecol,         pair[PAIR][1],
+                          rt.setfg(CDARK), str(len(execs))+" of "+str(len(pair[EXECS])), "exes,",
+                                           str(len(uniquefiles))+" uniq of "+str(len(files)), "file accesses", rt.resetfg() )
+
+                    prefixes = onesection[4]
+                    if prefixes:
+                        for tupl in prefixes:
+                            print(" "*(18),  #+len(pair[PAIR][0])),      # 53
+                                  rt.setfg(CTURQ), tupl[2],
+                                  rt.setfg(CDARK), " x"+str(tupl[1]),
+                                  rt.resetfg() )
 
                 onesection[7] = set()  # clear unique files for later
 
-                prefixes = onesection[4]
-                if prefixes:
-                    for tupl in prefixes:
-                        print(" "*(18),  #+len(pair[PAIR][0])),      # 53
-                              rt.setfg(CTURQ), tupl[2],
-                              rt.setfg(CDARK), " x"+str(tupl[1]),
-                              rt.resetfg() )
-
             if resultverbosity>70:
-                print("")
                 self._print_detailed_file_accesses_(donesections, first_event, last_event)
-
-        print(rt.resetfg())
-
 
 
     def _print_detailed_file_accesses_(self, donesections, first_event, last_event):
         i = first_event
-        print("details for", first_event, "-", last_event)
+#        print("details for", first_event, "-", last_event)
 
+        localranges = deepcopy(self.ranges_consumed)
         seenprocs = set()
 
+        if localranges[0][0]>i:
+            i = localranges[0][0]
+
         while i<=last_event:
+
             for onesection in donesections:
-                if len(onesection[6])>0:
+
+                while len(onesection[6])>0 and onesection[6][0]<=i:  # lower ones or exactly this one
                     processid = onesection[6][0]
-                    if processid==i:
-                        if processid not in seenprocs:
-                            seenprocs.add(processid)
-                            pair = onesection[2]
-                            typecol = self._suspicioustype_to_col(pair)
+                    if processid not in seenprocs:
+                        seenprocs.add(processid)
+                        pair = onesection[2]
+                        typecol = self._suspicioustype_to_col(pair)
 
-                            procevent = self._get_process_from_database(str(i))
+                        procevent = self._get_process_from_database(str(processid))
 
-                            print(
-                                   rt.setfg(CTURQ), str(i),
-                                   rt.setfg(CDARK), pair[PAIR][0]+rt.setfg(CDARK)+'('+str(procevent[PARENT_ID])+')',
-                                   rt.setfg(CNORM)+"==>"+typecol,
-                                   pair[PAIR][1]+rt.setfg(CDARK)+'('+str(i)+')',
-                                   rt.setfg(CTURQ)+Filter.remove_leading_binary_name(procevent[COMMAND_LINE]),
-                                   "",
-                                   rt.setfg(COFFYELLOW), procevent[WORKING_DIRECTORY],
+                        print(
+                               rt.setfg(CTURQ), str(processid),
+                               rt.setfg(CDARK), pair[PAIR][0]+rt.setfg(CDARK)+'('+str(procevent[PARENT_ID])+')',
+                               rt.setfg(CNORM)+"==>"+typecol,
+                               pair[PAIR][1]+rt.setfg(CDARK)+'('+str(procevent[ID])+')',
+                               rt.setfg(CTURQ)+Filter.remove_leading_binary_name(procevent[COMMAND_LINE]),
+                               "",
+                               rt.setfg(COFFYELLOW), procevent[WORKING_DIRECTORY],
 #                                   rt.setfg(CVIO3), procevent[DOMAIN_NAME],
 #                                   rt.setfg(CVIO1), procevent[USER_NAME],
-                                   rt.resetfg() )
-                            onesection[6].pop(0)
+                               rt.resetfg() )
+                        onesection[6].pop(0)
 
 
-                if len(onesection[5])>0:   # any files accesses
-                    if onesection[5][0][0]==i:   # and this specific one
+                if len(onesection[5])>0:   # there are files accesses
+                    if onesection[5][0][0]==i:   # and this specific one is it
                         uniquefiles = onesection[7]
                         access = onesection[5][0]
 
                         fullfilename = access[2][0]+access[2][1]+access[2][2]
+
                         if fullfilename not in uniquefiles:
                             pair = onesection[2]
                             typecol = self._suspicioustype_to_col(pair)
@@ -2154,6 +2191,7 @@ class ModelCmp4b(ModelTemplate):
                             procs = onesection[6]
 
                             ev = access[1]
+
                             print(
                                    rt.setfg(CNORM), str(ev[ID]),
                                    rt.setfg(CDARK), pair[PAIR][0]+rt.setfg(CDARK)+'('+str(ev[GRANDPARENT_ID])+')',
@@ -2161,9 +2199,9 @@ class ModelCmp4b(ModelTemplate):
                                    pair[PAIR][1]+rt.setfg(CDARK)+'('+str(ev[PARENT_ID])+')',
                                    rt.setfg(CNORM)+"-->",
                                    rt.setfg(CLIGHTGREEN) + FILEOP2STR[ev[TYPE]],
-                                   rt.setfg(CDARK) + access[2][0]+ \
+                                   rt.setfg(CDARK)      + access[2][0]+ \
                                    rt.setfg(CDARKGREEN) + access[2][1]+ \
-                                   rt.setfg(CNORM) + access[2][2],
+                                   rt.setfg(CNORM)      + access[2][2],
                                    rt.resetfg() )
 
                             uniquefiles.add(fullfilename)
@@ -2175,6 +2213,11 @@ class ModelCmp4b(ModelTemplate):
                         break
 
             i +=1
+            if i>localranges[0][1]:
+                localranges.pop(0)
+                if len(localranges)>0:   # not sure if this extra check is needed
+#                    print("fast-forward", i, "to", localranges[0][0])
+                    i = localranges[0][0]
 
 
     @staticmethod
