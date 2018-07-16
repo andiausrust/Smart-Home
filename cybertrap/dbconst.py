@@ -42,6 +42,21 @@ FILEOP2STR = ['  CRE',
               'REN_S',
               'REN_D']
 
+FILEOP2RW = [ 'CRE_',  #'  CRE',
+              'REA_',  # READ ',
+              'WRI_',  # 'WRITE',
+              'REN_',  #'  REN',
+              'DEL_',  #'  DEL',
+              'SPS_',  #' SPS ',
+              'PAW_',  #'WRI_P',
+              'PAR_',  #'REA_P',
+              'MMR_',  #'MM_RE',
+              'MMW_',  #'MM_RW',
+              'MMW_',  #'MM_WR',
+              'R_',  #'REN_S',
+              'W_']  #'REN_D']
+
+
 # registry ops
 REG_SET    = 0
 REG_CREATE = 1

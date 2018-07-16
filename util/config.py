@@ -1,6 +1,7 @@
 from configparser import ConfigParser
-from os import get_terminal_size, environ
-from sys import exit, version
+from shutil import get_terminal_size
+from os import environ
+from sys import exit, version, stdout
 
 try:
     import pandas as pd
@@ -101,10 +102,14 @@ class Config:
 
     @staticmethod
     def _set_console_sizes():
-        terminal = get_terminal_size()
-#        if terminal.columns == 0:   # pipe to file
-        col = int((terminal.columns-5)/10*6)
-        width = terminal.columns-5
+        if stdout.isatty():
+            terminal = get_terminal_size()
+    #        if terminal.columns == 0:   # pipe to file
+            col = int((terminal.columns-5)/10*6)
+            width = terminal.columns-5
+        else:
+            col = int(215/10*6)
+            width = 210
 #        print(col, width)
         pd.set_option('max_rows',      100)
         pd.set_option('max_colwidth',  col)

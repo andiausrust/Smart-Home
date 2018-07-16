@@ -10,6 +10,7 @@ VERSION = [("IPython",    "IPython"),
            ("Pandas",     "pandas"),
            ("SQLAlchemy", "sqlalchemy"),
            ("psycopg2",   "psycopg2"),
+           ("nilsimsa",   "nilsimsa"),
            ("matplotlib", "matplotlib"),
            ("bokeh",      "bokeh"),
            ("pika",       "pika"),
@@ -40,7 +41,10 @@ class CmdVersion(CommandTemplate):
         for i in VERSION:
             try:
                 module = import_module(i[1])
-                version = module.__version__
+                if i[1]!= 'nilsimsa':
+                    version = module.__version__
+                else:
+                    version = "available"
             except ImportError:
                 version = "...not installed?"
             print("{0:>11} {1:}".format(i[0], version))

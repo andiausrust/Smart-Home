@@ -14,6 +14,7 @@ from util.config import Config
 from util.conv import parse_datetimestring_to_dt, dt_to_str
 import time
 import datetime as dt
+from copy import deepcopy
 
 from r4.runself4 import RunSelf4
 
@@ -32,7 +33,7 @@ class CmdSelf(CommandTemplate):
         parser.add_argument("-d", metavar=('str','num'), dest='indb', nargs=2, required=True,
                             help="database alias, hostid")
 
-        parser.add_argument("-ref", metavar=('xxx','xxx'), dest='inrange', nargs='+', required=True,
+        parser.add_argument("-ref", metavar=('xxx','xxx'), dest='inref', nargs='+', required=True,
                             help="first, last event")
 
         parser.add_argument("-from", metavar=('event'), dest='infrom', required=False, help="force start processing from")
@@ -63,45 +64,48 @@ class CmdSelf(CommandTemplate):
 
 
 
-    def run(self, indb=None, inrange=None,
-                 ininter=None, infrom=None,
+    def run(self, indb=None, inref=None,
+            ininter=None, infrom=None,
             quiet=False,
             **kwargs):
 
 #        print(indb)
-#        print(inrange)
+#        print(inref)
 #        print(ininter)
 #        print(infrom)
 
-        if len(inrange) % 2 ==1: print("error: invalid ref range, not even number of arguments?"); exit(1)
+        if len(inref) % 2 ==1: print("error: invalid ref range, not even number of arguments?"); exit(1)
 
         db = indb[0]
         host = indb[1]
 
         fromevent = infrom
 
-        while True:
-            now = dt.datetime.now()
-            print("*** It is now", dt_to_str(now)+" ", end='')
+        if type(fromevent) is not int:
+
             s = RunSelf4(db, host, quiet)
 
-            if fromevent is None:
+            if fromevent is None:    # nothing passed, find startevent from database end
                 fromevent = int(s.substract_from_max_event(int(ininter)))
-
-            if type(fromevent) is not int:
-                if not fromevent.isdigit():    # if on first run is timestamp string, convert to event number
-                    fromevent = RunSelf4._convert_start_time_to_event_number_(s.dr, s.host, fromevent, s.quiet)
+            elif not fromevent.isdigit():    # if on first run is timestamp string, convert to event number
+                fromevent = RunSelf4._convert_start_time_to_event_number_(s.dr, s.host, fromevent, s.quiet)
 
             fromevent = int(fromevent)
+            s.shutdown()
+
+
+        while True:
+            now = dt.datetime.now()
+#            if not quiet:
+            print("*** It is now", dt_to_str(now)+" ")  #, end=''
+            s = RunSelf4(db, host, quiet)
 
             if fromevent<int(s.max_event):  # new events in database?
-                print("")
                 if not quiet:
                     print("=== REFERENCE RANGE ===")
-#                while len(inrange)>0:
-#                    fromev = inrange.pop(0)
-#                    toev =   inrange.pop(0)
-                s.consume_reference( [ [inrange[0],inrange[1] ] ] )
+
+                copyref = deepcopy(inref)
+                s.consume_reference(copyref)
 
                 if not quiet:
                     print("=== COMPARISON RANGE ===")
@@ -113,12 +117,14 @@ class CmdSelf(CommandTemplate):
                 time_start = time.time()
                 s.model2.pretty_print_for_humans(72)
                 timespan = time.time()-time_start
-                print("{:.2f}".format(timespan)+"s: details printout")
+                if not quiet:
+                    print("{:.2f}".format(timespan)+"s: details printout")
 
                 fromevent = int(s.max_event)+1
 
             else:
-                print(" - no new events in database, last", s.max_event, "< expected next", str(fromevent), " ...sleeping")
+                if not quiet:
+                    print(" - no new events in database, last", s.max_event, "< expected next", str(fromevent), " ...sleeping")
 
             s.shutdown()
 

@@ -11,6 +11,10 @@ from pandas import DataFrame
 
 from pprint import pprint
 
+# https://stackoverflow.com/questions/5225780/turn-off-a-warning-in-sqlalchemy
+import warnings
+from sqlalchemy import exc as sa_exc
+
 
 class Database:
 
@@ -35,10 +39,14 @@ class Database:
         for row in res:
             self.event_types[row.id] = row.type
 
-        # we are always interested in the events table, so mount it immediately
-        self.table_events = self.mount_table_from_db('events')
-        self.stat = None
+        # https://stackoverflow.com/questions/5225780/turn-off-a-warning-in-sqlalchemy
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=sa_exc.SAWarning)
 
+            # we are always interested in the events table, so mount it immediately
+            self.table_events = self.mount_table_from_db('events')
+
+        self.stat = None
 
         df_ctunits = pd.read_sql("SELECT * FROM ct_units", self.engine)
 

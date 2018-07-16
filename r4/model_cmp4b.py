@@ -565,7 +565,7 @@ class ModelCmp4b(ModelTemplate):
         return procevent
 
     @staticmethod
-    def _preprocess_file_for_special_dirs(pair, src_file):
+    def _preprocess_file_for_special_dirs(pair, src_file, fileop):
             t1_frags_without_file = ModelCmp4b._path_to_fragments_without_file(src_file)
 
 #            t1 = tuple(map(len,t1_frags_without_file))
@@ -588,6 +588,8 @@ class ModelCmp4b(ModelTemplate):
 #                t1 = (-90,len(filename))
 
 #            print(src_file, "", t1_frags_without_file, "", t1)
+
+#            t1_frags_without_file[0] = FILEOP2RW[fileop] + t1_frags_without_file[0]
             return t1_frags_without_file
 
     @staticmethod
@@ -699,13 +701,13 @@ class ModelCmp4b(ModelTemplate):
                 item = self._create_process_container_on_the_fly(ev)
 
 
-            t1_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, src_file)
+            t1_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, src_file, ev[TYPE])
             self.add_prefix(item[MYDIR_PREFIX], t1_frags_without_file)
 
             if fileop == RENAME:
                 dst_file = ev[DST_FILE_NAME]
 
-                t2_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, dst_file)
+                t2_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, dst_file, ev[TYPE])
                 self.add_prefix(item[MYDIR_PREFIX], t2_frags_without_file)
 
 #                 t2_frags_without_file = self._path_to_fragments_without_file(dst_file)
@@ -1700,7 +1702,7 @@ class ModelCmp4b(ModelTemplate):
 
 
     def _find_files_for_file_(self, src_file, prefixtext, prefixkey, ev, pair, knownfiles, allprocessids, resultverbosity):
-                    frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file)
+                    frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file, ev[TYPE])
                     frags_without_file = tuple(frags_without_filei)
 
     #                print(prefixkey, "   ", frags_without_file)
@@ -1740,7 +1742,7 @@ class ModelCmp4b(ModelTemplate):
 
     def _match_file_to_section_(self, src_file, prefixtext, prefixkey, ev, pair, knownfiles, exeids, uniquefiles):
 
-                    frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file)
+                    frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file, ev[TYPE])
                     frags_without_file = tuple(frags_without_filei)
 
                     if len(prefixkey)<=len(frags_without_file):                # prefix shorter than file
@@ -2014,14 +2016,16 @@ class ModelCmp4b(ModelTemplate):
                 allpairs_prefixes[looppair] = self.find_asym_prefixes(pair)
 
         if len(same_asym)==0 and len(fuz_asym)==0 and len(unique)==0:
-            print("nothing interesting here")
+            if not self.quiet:
+                print("nothing interesting here")
             return
 
-        print("same:", len(self.pairs_same),
-              "var:", len(self.pairs_var), "and there are ",
-              "SAME_ASYM:", len(same_asym),
-              " FUZ_ASYM:", len(fuz_asym),
-              " UNIQUE:", len(unique) )
+        if not self.quiet:
+            print("same:", len(self.pairs_same),
+                  "var:", len(self.pairs_var), "and there are ",
+                  "SAME_ASYM:", len(same_asym),
+                  " FUZ_ASYM:", len(fuz_asym),
+                  " UNIQUE:", len(unique) )
 
 
         if resultverbosity>59 and resultverbosity<70:
@@ -2174,7 +2178,7 @@ class ModelCmp4b(ModelTemplate):
 #                                   rt.setfg(CVIO3), procevent[DOMAIN_NAME],
 #                                   rt.setfg(CVIO1), procevent[USER_NAME],
                                rt.resetfg() )
-                        onesection[6].pop(0)
+                    onesection[6].pop(0)
 
 
                 if len(onesection[5])>0:   # there are files accesses

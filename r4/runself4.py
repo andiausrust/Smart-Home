@@ -68,7 +68,7 @@ class RunSelf4:
         astime = parse_datetimestring_to_dt(eventid)
         df = dr.find_first_event_on_or_after_time(dt_to_str(astime) )
         if df.size==0:
-            print("start_time_to_event_number: HELP! did not find any events after",dt_to_str(astime), "for host", host)
+            print("start_time_to_event_number: HELP! did not find any events after", dt_to_str(astime), "for host", host)
             exit(1)
         if not quiet:
             print("Host", host, "input time:", dt_to_str(astime))
@@ -88,57 +88,72 @@ class RunSelf4:
             print("Host", host, " nearest ->", df['time'][0], df.index[0])
         return df.index[0]
 
-
-    def consume_events(self, fromid:int, toid:int, dualconsume=False) -> int:
+                             # int or str
+    def consume_events(self, fromid, toid, dualconsume=False) -> int:
 #        print("consume_events:", fromid, "-", toid)
-        ev = self.dr.read_sql_one_event(str(fromid))
-        print("consume FROM:", str(ev[ID])+" ", dt_to_str(ev[TIME]))
-        ev = self.dr.read_sql_one_event(str(toid))
-        print("consume   TO:", str(ev[ID])+" ", dt_to_str(ev[TIME]))
 
-        events_processed = 0
-        time_start = time.time()
-        resprox = self.dr.read_sql(str(fromid), str(toid))
-        if not dualconsume:
-            self.model2.ranges_consumed.append( [fromid, toid] )
-#        self.model1.ranges_consumed.append( [fromid, toid] )
-        events_total = int(resprox.rowcount)
+        if type(fromid) is str and (not fromid.isdigit()):
+            fromid = self._convert_start_time_to_event_number_(self.dr, self.host, fromid, self.quiet)
 
-#        if not self.quiet:
-        timespan = time.time()-time_start
-        print("{:.2f}".format(timespan)+"s: ","SELECT: ", resprox.rowcount, "events", "("+str(int(resprox.rowcount/ timespan)), "events/s)")
+        if type(toid) is str and (not toid.isdigit()):
+            toid = self._convert_end_time_to_event_number_(  self.dr, self.host, toid, self.quiet)
 
-        time_start = time.time()
-        while events_processed<events_total:
-            ev = row2dict(resprox.fetchone())
-            self.model2.consume_event(ev)
-            if dualconsume:
-                self.model1.consume_event(ev)
+#        print("consume_events:", fromid, "-", toid)
 
-            events_processed +=1
+        fromid = int(fromid)    # if number is in a string
+        toid = int(toid)
 
-#        if not self.quiet:
-        timespan = time.time()-time_start
-        print("{:.2f}".format(timespan)+"s: ", events_processed, "events consumed")
+        if fromid < toid:
+            ev = self.dr.read_sql_one_event(str(fromid))
+            if not self.quiet:
+                print("consume FROM:", str(ev[ID])+" ", dt_to_str(ev[TIME]))
+            ev = self.dr.read_sql_one_event(str(toid))
+            if not self.quiet:
+                print("consume   TO:", str(ev[ID])+" ", dt_to_str(ev[TIME]))
 
-        return events_processed
+            events_processed = 0
+            time_start = time.time()
+            resprox = self.dr.read_sql(str(fromid), str(toid))
+            if not dualconsume:
+                self.model2.ranges_consumed.append( [fromid, toid] )
+    #        self.model1.ranges_consumed.append( [fromid, toid] )
+            events_total = int(resprox.rowcount)
+
+    #        if not self.quiet:
+            timespan = time.time()-time_start
+            if not self.quiet:
+                print("{:.2f}".format(timespan)+"s: ","SELECT: ", resprox.rowcount, "events", "("+str(int(resprox.rowcount/ timespan)), "events/s)")
+
+            time_start = time.time()
+            while events_processed<events_total:
+                ev = row2dict(resprox.fetchone())
+                self.model2.consume_event(ev)
+                if dualconsume:
+                    self.model1.consume_event(ev)
+
+                events_processed +=1
+
+    #        if not self.quiet:
+            timespan = time.time()-time_start
+            if not self.quiet:
+                print("{:.2f}".format(timespan)+"s: ", events_processed, "events consumed")
+
+            return events_processed
+        else:
+            print("BUG? consume_events:", fromid, " is not <", toid, "? - doing nothing")
+            return 0
 
 
     def consume_reference(self, ranges: list):
         while len(ranges)>0:
-            range1 = ranges.pop(0)
-#            print("running ref on", range1)
+            fromid = ranges.pop(0)
 
-            if not range1[0].isdigit():
-                range1[0] = self._convert_start_time_to_event_number_(self.dr, self.host, range1[0], self.quiet)
+            if fromid is tuple:
+                self.consume_events(fromid[0], fromid[1], dualconsume=True)
+            else:
+                toid = ranges.pop(0)
+                self.consume_events(fromid,    toid,      dualconsume=True)
 
-            if not range1[1].isdigit():
-                range1[1] = self._convert_end_time_to_event_number_(  self.dr, self.host, range1[1], self.quiet)
-
-            range1[0] = int(range1[0])
-            range1[1] = int(range1[1])
-
-            self.consume_events(range1[0], range1[1], dualconsume=True)
 
     def run_evaluate(self):
         time_start = time.time()
@@ -147,25 +162,28 @@ class RunSelf4:
             self.model2.do_count_pair_types()
         timespan = time.time()-time_start
 
-        print("{:.2f}".format(timespan)+"s:  pair evaluation done -->",
-              "S", len(self.model2.pairs_same),
-              "V", len(self.model2.pairs_var),
-              "  SI", same_ident,
-              " SS", same_sym,
-              " SA", same_asym,
-              "  FI", fuz_ident,
-              " FS", fuz_sym,
-              " FA", fuz_asym,
-              "  UNI", unique)
+        if not self.quiet:
+            print("{:.2f}".format(timespan)+"s:  pair evaluation done -->",
+                  "S", len(self.model2.pairs_same),
+                  "V", len(self.model2.pairs_var),
+                  "  SI", same_ident,
+                  " SS", same_sym,
+                  " SA", same_asym,
+                  "  FI", fuz_ident,
+                  " FS", fuz_sym,
+                  " FA", fuz_asym,
+                  "  UNI", unique)
 
     # no From was provided, so get a start by substraction
     def substract_from_max_event(self, seconds):
         ev = self.read_sql_one_event_and_convert(self.max_event)
-        print("last event in database:", ev[TIME], ev[ID])
+        if not self.quiet:
+            print("last event in database:", ev[TIME], ev[ID])
         newtime = ev[TIME] - dt.timedelta(seconds=seconds)
         newtime = newtime.strftime('%Y-%m-%d.%H:%M:%S.%f')
         newstart = self._convert_start_time_to_event_number_(self.dr, self.host, newtime, self.quiet)
-        print(" using as actual start:", newtime, newstart)
+        if not self.quiet:
+            print(" using as actual start:", newtime, newstart)
         return newstart
 
 
