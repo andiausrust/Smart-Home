@@ -57,7 +57,8 @@ class ModelCmp4b(ModelTemplate):
 
         self.hostcolhi, self.hostcollo = colors
 
-        self.clear_state()
+        self.clear_state()  ####### sub-states
+
         self.last_event_consumed = None
 
         self.other  = None
@@ -76,9 +77,59 @@ class ModelCmp4b(ModelTemplate):
 
         self.tick_start = None
         self.tick_end   = None
-        self.tick_delta = timedelta(seconds=60) *30  # 60*3    # ticker for model internal periodic tasks
+        self.tick_delta = timedelta(seconds=60) *30   # 60*3    # ticker for model internal periodic tasks
 
         self.ranges_consumed = []
+
+        self.addnetwork = False       # network events analysis
+        if 'addnetwork' in kwargs:
+            self.addnetwork = kwargs['addnetwork']
+
+        self.addfileop = False        # detailes file operations
+        if 'addfileop' in kwargs:
+            self.addfileop = kwargs['addfileop']
+
+        self.allfiles = False          # dump all files accessed, not only the first one
+        if 'allfiles' in kwargs:
+            self.allfiles = kwargs['allfiles']
+
+        self.processonly = False       # show only process events in details listing
+        if 'processonly' in kwargs:
+            self.processonly = kwargs['processonly']
+
+    def create_deepcopy(self):
+        m = ModelCmp4b( self.hostid, self.hostname, [self.hostcolhi, self.hostcollo],  self.dr)
+
+        m.pairs_same = deepcopy(self.pairs_same)
+        m.pairs_var =  deepcopy(self.pairs_var)
+
+        m.last_event_consumed = deepcopy(self.last_event_consumed)
+        m.reboots = deepcopy(self.reboots)
+        m.rebootid = deepcopy(self.rebootid)
+        m.rebootstr = deepcopy(self.rebootid)
+        m.time_first_reboot = deepcopy(self.time_first_reboot)
+        m.tick_start = deepcopy(self.tick_start)
+        m.tick_end = deepcopy(self.tick_end)
+        m.tick_delta = deepcopy(self.tick_delta)
+        m.ranges_consumed = deepcopy(self.ranges_consumed)
+
+        m.total_events = deepcopy(self.total_events)
+        m.total_events_file     = deepcopy(self.total_events_file)
+        m.total_events_network  = deepcopy(self.total_events_network)
+        m.total_events_process  = deepcopy(self.total_events_process)
+        m.total_events_registry = deepcopy(self.total_events_registry)
+        m.total_events_thread   = deepcopy(self.total_events_thread)
+
+        m.result = deepcopy(self.result)
+
+        m.quiet       = deepcopy(self.quiet)
+        m.fromreboot  = deepcopy(self.fromreboot)
+        m.addnetwork  = deepcopy(self.addnetwork)
+        m.addfileop   = deepcopy(self.addfileop)
+        m.allfiles    = deepcopy(self.allfiles)
+        m.processonly = deepcopy(self.processonly)
+
+        return m
 
 
     def set_other(self, othermodel):
@@ -425,7 +476,7 @@ class ModelCmp4b(ModelTemplate):
             # insert pair data structure into active sets
             # called either a) for brand new pair or b) for resurrection of expired pair
 
-            if relation in self.other.pairs_var:
+            if self.other and relation in self.other.pairs_var:
                 # new to us, but other has seen this pair already,
                 # so we are actually same
                 self.pairs_same[relation] = item
@@ -589,7 +640,8 @@ class ModelCmp4b(ModelTemplate):
 
 #            print(src_file, "", t1_frags_without_file, "", t1)
 
-#            t1_frags_without_file[0] = FILEOP2RW[fileop] + t1_frags_without_file[0]
+            if fileop:
+                t1_frags_without_file[0] = FILEOP2RW[fileop] + t1_frags_without_file[0]
             return t1_frags_without_file
 
     @staticmethod
@@ -701,13 +753,20 @@ class ModelCmp4b(ModelTemplate):
                 item = self._create_process_container_on_the_fly(ev)
 
 
-            t1_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, src_file, ev[TYPE])
+            if self.addfileop:
+                t1_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, src_file, ev[TYPE])
+            else:
+                t1_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, src_file, None)
+
             self.add_prefix(item[MYDIR_PREFIX], t1_frags_without_file)
 
             if fileop == RENAME:
                 dst_file = ev[DST_FILE_NAME]
 
-                t2_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, dst_file, ev[TYPE])
+                if self.addfileop:
+                    t2_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, dst_file, ev[TYPE])
+                else:
+                    t2_frags_without_file = ModelCmp4b._preprocess_file_for_special_dirs(item, dst_file, None)
                 self.add_prefix(item[MYDIR_PREFIX], t2_frags_without_file)
 
 #                 t2_frags_without_file = self._path_to_fragments_without_file(dst_file)
@@ -771,7 +830,8 @@ class ModelCmp4b(ModelTemplate):
 
             elif ev[TYPE_ID] == NETWORK:
                 self.total_events_network +=1
-#                self.consume_network(ev)
+                if self.addnetwork:
+                    self.consume_network(ev)
 
 
             elif ev[TYPE_ID] == REGISTRY:
@@ -930,48 +990,49 @@ class ModelCmp4b(ModelTemplate):
             friend = None
             tyype  = None
 
-            for otherpair in self.other.pairs_var:
-                testfriend = self.other.pairs_var[otherpair]
+            if self.other:
+                for otherpair in self.other.pairs_var:
+                    testfriend = self.other.pairs_var[otherpair]
 
-                if ModelCmp4b.is_exename_fuzzy_friend(pair, testfriend):
-                    if testfriend[LAST_EVENT] != testfriend[EVAL_EVENT]:
-                        ModelCmp4b.calc_one_nilsimsa(testfriend[MYDIR_PREFIX], testfriend[MYDIR_PRENIL], testfriend[BIN_TUPL])
-                        testfriend[EVAL_EVENT] = testfriend[LAST_EVENT]
+                    if ModelCmp4b.is_exename_fuzzy_friend(pair, testfriend):
+                        if testfriend[LAST_EVENT] != testfriend[EVAL_EVENT]:
+                            ModelCmp4b.calc_one_nilsimsa(testfriend[MYDIR_PREFIX], testfriend[MYDIR_PRENIL], testfriend[BIN_TUPL])
+                            testfriend[EVAL_EVENT] = testfriend[LAST_EVENT]
 
-                    newresult = ModelCmp4b.eval_one_pair(pair, testfriend)
-                    newfriend = testfriend
+                        newresult = ModelCmp4b.eval_one_pair(pair, testfriend)
+                        newfriend = testfriend
 
-                    if newresult[0] == 0:
-                        if newresult[1]==0:
-                            newtyype = TFUZ_IDENT
+                        if newresult[0] == 0:
+                            if newresult[1]==0:
+                                newtyype = TFUZ_IDENT
+                            else:
+                                newtyype = TFUZ_SYM
                         else:
-                            newtyype = TFUZ_SYM
-                    else:
-                        # no fuzzy match if mismatched prefixes == number of prefixes, that's a crap match
-                        if newresult[0]==len(pair[MYDIR_PREFIX]):
-                            continue
-                        else:
-                            newtyype = TFUZ_ASYM
+                            # no fuzzy match if mismatched prefixes == number of prefixes, that's a crap match
+                            if newresult[0]==len(pair[MYDIR_PREFIX]):
+                                continue
+                            else:
+                                newtyype = TFUZ_ASYM
 
-                    if result:
-                        if newresult[0]>result[0]:  # more prefixes wrong than best result
-                            continue
+                        if result:
+                            if newresult[0]>result[0]:  # more prefixes wrong than best result
+                                continue
 
-                        if newresult[0]<result[0]:  # less, so surely better, take it
+                            if newresult[0]<result[0]:  # less, so surely better, take it
+                                result = newresult
+                                friend = newfriend
+                                tyype = newtyype
+                                continue
+
+                            if newresult[1]<result[1]:  # same prefixes, but less hash distance
+                                result = newresult
+                                friend = newfriend
+                                tyype = newtyype
+
+                        else:   # first result ever -> take it
                             result = newresult
                             friend = newfriend
                             tyype = newtyype
-                            continue
-
-                        if newresult[1]<result[1]:  # same prefixes, but less hash distance
-                            result = newresult
-                            friend = newfriend
-                            tyype = newtyype
-
-                    else:   # first result ever -> take it
-                        result = newresult
-                        friend = newfriend
-                        tyype = newtyype
 
             if result:  # one fuzzy friend was found
                 pair[EVAL_STATE] = result
@@ -1138,9 +1199,9 @@ class ModelCmp4b(ModelTemplate):
             print("60 - suspicious pairs summary - summary")
             print("61 - suspicious pairs summary - with file access details")
             print("69 - suspicious pairs summary - you know want you want")
-            print("70 - suspicious pairs summary - event ordered")
-            print("71 - suspicious pairs summary - event ordered with event details")
-            print("72 - direct mode for events details only")
+            print("70 - suspicious pairs summary - overview event ordered")
+            print("71 - suspicious pairs summary - overview + event details")
+            print("72 - suspicious pairs summary - only detailed list of events")
             pass
 
 
@@ -1208,8 +1269,9 @@ class ModelCmp4b(ModelTemplate):
     def do_evaluation(self,force=False):
         self.eval_same(force)
         self.eval_var()
-        self.other.eval_same(force)
-        self.other.eval_var()
+        if self.other:
+            self.other.eval_same(force)
+            self.other.eval_var()
 
 
 ##############################################################################
@@ -1702,7 +1764,10 @@ class ModelCmp4b(ModelTemplate):
 
 
     def _find_files_for_file_(self, src_file, prefixtext, prefixkey, ev, pair, knownfiles, allprocessids, resultverbosity):
-                    frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file, ev[TYPE])
+                    if self.addfileop:
+                        frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file, ev[TYPE])
+                    else:
+                        frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file, None)
                     frags_without_file = tuple(frags_without_filei)
 
     #                print(prefixkey, "   ", frags_without_file)
@@ -1742,7 +1807,10 @@ class ModelCmp4b(ModelTemplate):
 
     def _match_file_to_section_(self, src_file, prefixtext, prefixkey, ev, pair, knownfiles, exeids, uniquefiles):
 
-                    frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file, ev[TYPE])
+                    if self.addfileop:
+                        frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file, ev[TYPE])
+                    else:
+                        frags_without_filei = ModelCmp4b._preprocess_file_for_special_dirs(pair, src_file, None)
                     frags_without_file = tuple(frags_without_filei)
 
                     if len(prefixkey)<=len(frags_without_file):                # prefix shorter than file
@@ -1816,7 +1884,7 @@ class ModelCmp4b(ModelTemplate):
 #                print("adjusted end from:", localranges[0][1], "to", last_event)
                 localranges[-1][1]=last_event
 
-            break   # if we got here, all ranges should be fixed
+            break   # if we got here, all ranges should be fixed, so exit
 
 #        pprint(localranges)
 
@@ -2180,41 +2248,41 @@ class ModelCmp4b(ModelTemplate):
                                rt.resetfg() )
                     onesection[6].pop(0)
 
+                if not self.processonly:
+                    if len(onesection[5])>0:   # there are files accesses
+                        if onesection[5][0][0]==i:   # and this specific one is it
+                            uniquefiles = onesection[7]
+                            access = onesection[5][0]
 
-                if len(onesection[5])>0:   # there are files accesses
-                    if onesection[5][0][0]==i:   # and this specific one is it
-                        uniquefiles = onesection[7]
-                        access = onesection[5][0]
+                            fullfilename = access[2][0]+access[2][1]+access[2][2]
 
-                        fullfilename = access[2][0]+access[2][1]+access[2][2]
+                            if self.allfiles or (fullfilename not in uniquefiles):
+                                pair = onesection[2]
+                                typecol = self._suspicioustype_to_col(pair)
+                                files = onesection[5]
+                                procs = onesection[6]
 
-                        if fullfilename not in uniquefiles:
-                            pair = onesection[2]
-                            typecol = self._suspicioustype_to_col(pair)
-                            files = onesection[5]
-                            procs = onesection[6]
+                                ev = access[1]
 
-                            ev = access[1]
+                                print(
+                                       rt.setfg(CNORM), str(ev[ID]),
+                                       rt.setfg(CDARK), pair[PAIR][0]+rt.setfg(CDARK)+'('+str(ev[GRANDPARENT_ID])+')',
+                                       rt.setfg(CNORM)+"==>"+typecol,
+                                       pair[PAIR][1]+rt.setfg(CDARK)+'('+str(ev[PARENT_ID])+')',
+                                       rt.setfg(CNORM)+"-->",
+                                       rt.setfg(CLIGHTGREEN) + FILEOP2STR[ev[TYPE]],
+                                       rt.setfg(CDARK)      + access[2][0]+ \
+                                       rt.setfg(CDARKGREEN) + access[2][1]+ \
+                                       rt.setfg(CNORM)      + access[2][2],
+                                       rt.resetfg() )
 
-                            print(
-                                   rt.setfg(CNORM), str(ev[ID]),
-                                   rt.setfg(CDARK), pair[PAIR][0]+rt.setfg(CDARK)+'('+str(ev[GRANDPARENT_ID])+')',
-                                   rt.setfg(CNORM)+"==>"+typecol,
-                                   pair[PAIR][1]+rt.setfg(CDARK)+'('+str(ev[PARENT_ID])+')',
-                                   rt.setfg(CNORM)+"-->",
-                                   rt.setfg(CLIGHTGREEN) + FILEOP2STR[ev[TYPE]],
-                                   rt.setfg(CDARK)      + access[2][0]+ \
-                                   rt.setfg(CDARKGREEN) + access[2][1]+ \
-                                   rt.setfg(CNORM)      + access[2][2],
-                                   rt.resetfg() )
+                                uniquefiles.add(fullfilename)
 
-                            uniquefiles.add(fullfilename)
-
-                        onesection[5].pop(0)
-                        if len(onesection[5])>0:
-                            if onesection[5][0][0]==i:  # same id again -> there is a second part of rename
-                                i -=1                   # so cheat and reuse event id
-                        break
+                            onesection[5].pop(0)
+                            if len(onesection[5])>0:
+                                if onesection[5][0][0]==i:  # same id again -> there is a second part of rename
+                                    i -=1                   # so cheat and reuse event id
+                            break
 
             i +=1
             if i>localranges[0][1]:

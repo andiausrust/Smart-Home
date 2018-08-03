@@ -7,11 +7,10 @@ from cybertrap.database_reader4 import DatabaseReader4
 import time
 import datetime as dt
 from pprint import pprint
+from copy import deepcopy
 
 # from util.conv import dt_clear_hour, dt_approx_by_delta
 from r4.model_cmp4b import ModelCmp4b
-from r4.modeltemplate import ModelTemplate
-from r4.modelconst import RELTIME
 from util.conv import printNiceTimeDelta, dt_to_str, parse_datetimestring_to_dt
 
 from util.config import Config
@@ -28,30 +27,46 @@ class RunSelf4:
         return db
 
 
-    def __init__(self, db, host, quiet=False):
-        self.db = RunSelf4._get_database_(db, quiet)
+    def __init__(self, db, host, quiet=False, network=False, fileop=False, allfiles=False, inprocessonly=False):
+        self.dburl = db
         self.host = host
+        self.quiet = quiet
 
+        self.reinit()
+                                     # hostid    name   colors    dr
+        self.modelref = ModelCmp4b( str(host), str(db), [11,149], self.dr,
+                                    quiet=True, fromreboot=False, addnetwork=network, addfileop=fileop, allfiles=allfiles, processonly=inprocessonly)
+#        self.model2 = ModelCmp4b( str(host), str(db), [14,36],  self.dr, quiet=True, fromreboot=False)
+        self.model1 = None
+        self.model2 = None
+
+    def reinit(self):
+        self.db = RunSelf4._get_database_(self.dburl, self.quiet)
         self.dr = DatabaseReader4(self.db, self.host)
 
         self.min_event = self.dr.find_first_event_for_host().index[0]
         self.max_event = self.dr.find_last_event_for_host().index[0]
-        self.quiet = quiet
+        self.print_db_stat()
 
-        if not quiet:
+
+    def print_db_stat(self):
+        if not self.quiet:
             print("database has events for host", self.host, "in range:")
             ev1 = self.read_sql_one_event_and_convert(self.min_event)
             print("  ", ev1[ID], dt_to_str(ev1[TIME]) )
             ev2 = self.read_sql_one_event_and_convert(self.max_event)
             print("  ", ev2[ID], dt_to_str(ev2[TIME]) )
 
-                                     # hostid    name   colors    dr
-        self.model1 = ModelCmp4b( str(host), str(db), [11,149], self.dr, quiet=True, fromreboot=False) # fromreboot=True
-        self.model2 = ModelCmp4b( str(host), str(db), [14,36],  self.dr, quiet=True, fromreboot=False) # fromreboot=True
 
+    def make_clone_of_reference_model(self):
+        self.model1 = self.modelref.create_deepcopy()
+        self.model2 = self.modelref.create_deepcopy()
         self.model1.set_other(self.model2)
         self.model2.set_other(self.model1)
+        self.model2.hostcolhi = 14
+        self.model2.hostcollo = 36
 
+        self.model2.dr = self.dr
 
 
     def read_sql_one_event_and_convert(self, eventid:str) -> dict:
@@ -88,8 +103,9 @@ class RunSelf4:
             print("Host", host, " nearest ->", df['time'][0], df.index[0])
         return df.index[0]
 
+
                              # int or str
-    def consume_events(self, fromid, toid, dualconsume=False) -> int:
+    def consume_events(self, fromid, toid) -> int:
 #        print("consume_events:", fromid, "-", toid)
 
         if type(fromid) is str and (not fromid.isdigit()):
@@ -100,7 +116,7 @@ class RunSelf4:
 
 #        print("consume_events:", fromid, "-", toid)
 
-        fromid = int(fromid)    # if number is in a string
+        fromid = int(fromid)
         toid = int(toid)
 
         if fromid < toid:
@@ -114,12 +130,12 @@ class RunSelf4:
             events_processed = 0
             time_start = time.time()
             resprox = self.dr.read_sql(str(fromid), str(toid))
-            if not dualconsume:
+
+            if self.model2:
                 self.model2.ranges_consumed.append( [fromid, toid] )
-    #        self.model1.ranges_consumed.append( [fromid, toid] )
+
             events_total = int(resprox.rowcount)
 
-    #        if not self.quiet:
             timespan = time.time()-time_start
             if not self.quiet:
                 print("{:.2f}".format(timespan)+"s: ","SELECT: ", resprox.rowcount, "events", "("+str(int(resprox.rowcount/ timespan)), "events/s)")
@@ -127,13 +143,14 @@ class RunSelf4:
             time_start = time.time()
             while events_processed<events_total:
                 ev = row2dict(resprox.fetchone())
-                self.model2.consume_event(ev)
-                if dualconsume:
-                    self.model1.consume_event(ev)
+
+                if not self.model2:
+                    self.modelref.consume_event(ev)
+                else:
+                    self.model2.consume_event(ev)
 
                 events_processed +=1
 
-    #        if not self.quiet:
             timespan = time.time()-time_start
             if not self.quiet:
                 print("{:.2f}".format(timespan)+"s: ", events_processed, "events consumed")
@@ -144,15 +161,17 @@ class RunSelf4:
             return 0
 
 
-    def consume_reference(self, ranges: list):
+    # either [from, to, from, to, ....]  or  [ [from,to], [from,to], ...]
+    def consume_events_multi(self, inranges: list):
+        ranges = deepcopy(inranges)
         while len(ranges)>0:
             fromid = ranges.pop(0)
 
             if fromid is tuple:
-                self.consume_events(fromid[0], fromid[1], dualconsume=True)
+                self.consume_events(fromid[0], fromid[1])
             else:
                 toid = ranges.pop(0)
-                self.consume_events(fromid,    toid,      dualconsume=True)
+                self.consume_events(fromid,    toid     )
 
 
     def run_evaluate(self):
@@ -187,16 +206,24 @@ class RunSelf4:
         return newstart
 
 
-    def shutdown(self):
-#        ev = self.model2.last_event_consumed
-#        print("== SHUTDOWN, last event consumed was:", str(ev[ID])+" ", str(ev[TIME]) )
+    def shutdown_one_run(self):
+        if not self.quiet:
+            if not self.model2:
+                ev = self.modelref.last_event_consumed
+            else:
+                ev = self.model2.last_event_consumed
+            print("== SHUTDOWN, last event consumed was:", str(ev[ID])+" ", str(ev[TIME]) )
 
         self.db.shutdown()
         self.db = None
-
         self.dr = None
+        self.modelref.dr = None
 
-        self.model1.other = None
-        self.model2.other = None
-        self.model1 = None
-        self.model2 = None
+        if self.model1:
+            self.model1.dr = None
+            self.model1.other = None
+            self.model1 = None
+        if self.model2:
+            self.model2.dr = None
+            self.model2.other = None
+            self.model2 = None

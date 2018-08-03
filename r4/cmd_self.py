@@ -40,7 +40,14 @@ class CmdSelf(CommandTemplate):
 
         parser.add_argument("-int", metavar=('sec'), dest='ininter', required=True,  help="analysis interval in seconds")
 
-        parser.add_argument("-quiet", dest='quiet', action='store_true', required=False, help="be quieter")
+        parser.add_argument("-quiet",    dest='quiet', action='store_true', required=False, help="be quieter")
+        parser.add_argument("-proconly", dest='inprocessonly',  action='store_true', required=False, help="only show process event details")
+
+        parser.add_argument("-allfiles", dest='inallfiles', action='store_true', required=False, help="show all file accesses, not only the first one")
+        parser.add_argument("-fileop",   dest='infileop',  action='store_true', required=False, help="do detailed file operations !EXPERIMENTAL!")
+
+# not fully implemented yet
+#        parser.add_argument("-network",  dest='innetwork', action='store_true', required=False, help="do network events !EXPERIMENTAL!")
 
         parser.set_defaults(cls=CmdSelf)
 
@@ -63,9 +70,9 @@ class CmdSelf(CommandTemplate):
 
 
 
-
     def run(self, indb=None, inref=None,
             ininter=None, infrom=None,
+            innetwork=False, infileop=False, inallfiles=False, inprocessonly=False,
             quiet=False,
             **kwargs):
 
@@ -81,35 +88,38 @@ class CmdSelf(CommandTemplate):
 
         fromevent = infrom
 
-        if type(fromevent) is not int:
+        s = RunSelf4(db, host, quiet, innetwork, infileop, inallfiles, inprocessonly)
 
-            s = RunSelf4(db, host, quiet)
+        if type(fromevent) is not int:
 
             if fromevent is None:    # nothing passed, find startevent from database end
                 fromevent = int(s.substract_from_max_event(int(ininter)))
+
             elif not fromevent.isdigit():    # if on first run is timestamp string, convert to event number
                 fromevent = RunSelf4._convert_start_time_to_event_number_(s.dr, s.host, fromevent, s.quiet)
 
             fromevent = int(fromevent)
-            s.shutdown()
 
+
+        if not quiet:
+            print("=== REFERENCE RANGE ===")
+
+        s.consume_events_multi(inref)
+        s.shutdown_one_run()
 
         while True:
             now = dt.datetime.now()
 #            if not quiet:
             print("*** It is now", dt_to_str(now)+" ")  #, end=''
-            s = RunSelf4(db, host, quiet)
+            s.reinit()
 
             if fromevent<int(s.max_event):  # new events in database?
-                if not quiet:
-                    print("=== REFERENCE RANGE ===")
 
-                copyref = deepcopy(inref)
-                s.consume_reference(copyref)
+                s.make_clone_of_reference_model()
 
                 if not quiet:
                     print("=== COMPARISON RANGE ===")
-                s.consume_events(fromevent, int(s.max_event), False)
+                s.consume_events(fromevent, int(s.max_event))
                 s.run_evaluate()
 
                 if not quiet:
@@ -126,6 +136,6 @@ class CmdSelf(CommandTemplate):
                 if not quiet:
                     print(" - no new events in database, last", s.max_event, "< expected next", str(fromevent), " ...sleeping")
 
-            s.shutdown()
+            s.shutdown_one_run()
 
             time.sleep(int(ininter))

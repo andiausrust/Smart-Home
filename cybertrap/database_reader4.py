@@ -28,7 +28,11 @@ class DatabaseReader4:
 
     def read_sql_one_event(self, event: str):
         result = self.read_sql_events(event, event)
-        return list(result)[0]
+        result = list(result)
+        if len(result)==0:
+            print("Help! got no result back for event", event)
+            exit(1)
+        return result[0]
 
 
     def read_sql(self, event_from: str, event_to: str):

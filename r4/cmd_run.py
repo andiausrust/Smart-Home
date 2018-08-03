@@ -78,6 +78,10 @@ class CmdRun(CommandTemplate):
                             action='store_true', required=False,
                             help="enforce that processing starts from first reboot")
 
+        parser.add_argument("-allfiles", dest='inallfiles', action='store_true', required=False, help="show all file accesses, not only the first one")
+        parser.add_argument("-fileop",   dest='infileop',  action='store_true', required=False, help="do detailed file operations !EXPERIMENTAL!")
+        parser.add_argument("-network",  dest='innetwork', action='store_true', required=False, help="do network events !EXPERIMENTAL!")
+
         parser.set_defaults(cls=CmdRun)
 
 
@@ -134,6 +138,7 @@ class CmdRun(CommandTemplate):
             result=None, quiet=False,
             inmodel=None, infromreboot=False,
             pcases=None, pratio=None,
+            innetwork=False, infileop=False, inallfiles=False,
             **kwargs):
 
 #        print(len(indb1), indb1)
@@ -160,9 +165,11 @@ class CmdRun(CommandTemplate):
 
         m1temp = getmodel4(inmodel)
                         # hostid    name           colors    dr
-        model1 = m1temp(str(host1), str(indb1[0]), [11,149], dr1, fromreboot=infromreboot, quiet=quiet)
+        model1 = m1temp(str(host1), str(indb1[0]), [11,149], dr1,
+                        fromreboot=infromreboot, quiet=quiet, addnetwork=innetwork, addfileop=infileop, allfiles=inallfiles)
         m2temp = getmodel4(inmodel)
-        model2 = m2temp(str(host2), str(indb2[0]), [14,36],  dr2, fromreboot=infromreboot, quiet=quiet)
+        model2 = m2temp(str(host2), str(indb2[0]), [14,36],  dr2,
+                        fromreboot=infromreboot, quiet=quiet, addnetwork=innetwork, addfileop=infileop, allfiles=inallfiles)
 
         model1.set_other(model2)
         model2.set_other(model1)
