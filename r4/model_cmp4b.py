@@ -62,6 +62,8 @@ class ModelCmp4b(ModelTemplate):
         self.last_event_consumed = None
 
         self.other  = None
+        self.ioc = None
+
         self.reboots = []
         self.rebootid  = None   # event id of last seen reboot as int
         self.rebootstr = None   # as string
@@ -2222,10 +2224,13 @@ class ModelCmp4b(ModelTemplate):
         if localranges[0][0]>i:
             i = localranges[0][0]
 
+        iocdata = dict()
+
         while i<=last_event:
 
             for onesection in donesections:
 
+                # process events
                 while len(onesection[6])>0 and onesection[6][0]<=i:  # lower ones or exactly this one
                     processid = onesection[6][0]
                     if processid not in seenprocs:
@@ -2246,8 +2251,19 @@ class ModelCmp4b(ModelTemplate):
 #                                   rt.setfg(CVIO3), procevent[DOMAIN_NAME],
 #                                   rt.setfg(CVIO1), procevent[USER_NAME],
                                rt.resetfg() )
+
+                        if self.ioc:
+                            if pair[EVAL_TYPE] == TUNIQUE:
+                                entry = (str(processid), "UNIQ process start")
+                            else:
+                                entry = (str(processid), "ASYM behaving process start")
+
+                            if entry not in iocdata:
+                                iocdata[entry] = []
+
                     onesection[6].pop(0)
 
+                # file events
                 if not self.processonly:
                     if len(onesection[5])>0:   # there are files accesses
                         if onesection[5][0][0]==i:   # and this specific one is it
@@ -2278,6 +2294,26 @@ class ModelCmp4b(ModelTemplate):
 
                                 uniquefiles.add(fullfilename)
 
+                                if self.ioc:
+                                    if pair[EVAL_TYPE] == TUNIQUE:
+                                        entry = (str(ev[ID]), "file access of UNIQ process")
+                                    else:
+                                        entry = (str(ev[ID]), "ASYM file access of known process")
+
+                                    par = str(ev[PARENT_ID])
+
+                                    wasfound = False
+
+                                    for k,v in iocdata.items():
+                                        if k[0] == par:
+                                            v.append(entry)
+                                            wasfound = True
+                                            break
+
+                                    if not wasfound:
+                                        print("BUG? could not insert file event:", entry[0], entry[1])
+
+
                             onesection[5].pop(0)
                             if len(onesection[5])>0:
                                 if onesection[5][0][0]==i:  # same id again -> there is a second part of rename
@@ -2290,6 +2326,15 @@ class ModelCmp4b(ModelTemplate):
                 if len(localranges)>0:   # not sure if this extra check is needed
 #                    print("fast-forward", i, "to", localranges[0][0])
                     i = localranges[0][0]
+
+        if self.ioc:
+#            for proc in iocdata:
+#                print("PROC:", proc[0], proc[1])   # eventid, comment
+#                for file in iocdata[proc]:
+#                    print("     ", file[0], file[1])   # eventid, comment
+
+            self.ioc.mark_ioc(iocdata)
+
 
 
     @staticmethod

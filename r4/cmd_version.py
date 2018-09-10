@@ -14,6 +14,7 @@ VERSION = [("IPython",    "IPython"),
            ("matplotlib", "matplotlib"),
            ("bokeh",      "bokeh"),
            ("pika",       "pika"),
+           ("protobuf",   "google.protobuf"),
            ("flask",      "flask"),
            ("jinja2",     "jinja2"),
            ]

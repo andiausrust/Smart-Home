@@ -27,10 +27,12 @@ class RunSelf4:
         return db
 
 
-    def __init__(self, db, host, quiet=False, network=False, fileop=False, allfiles=False, inprocessonly=False):
+    def __init__(self, db, host, quiet=False, ioc=None,
+                 network=False, fileop=False, allfiles=False, inprocessonly=False):
         self.dburl = db
         self.host = host
         self.quiet = quiet
+        self.ioc = ioc
 
         self.reinit()
                                      # hostid    name   colors    dr
@@ -47,6 +49,8 @@ class RunSelf4:
         self.min_event = self.dr.find_first_event_for_host().index[0]
         self.max_event = self.dr.find_last_event_for_host().index[0]
         self.print_db_stat()
+        if self.ioc:
+            self.ioc.open()
 
 
     def print_db_stat(self):
@@ -67,6 +71,8 @@ class RunSelf4:
         self.model2.hostcollo = 36
 
         self.model2.dr = self.dr
+        if self.ioc:
+            self.model2.ioc = self.ioc
 
 
     def read_sql_one_event_and_convert(self, eventid:str) -> dict:
@@ -119,7 +125,7 @@ class RunSelf4:
         fromid = int(fromid)
         toid = int(toid)
 
-        if fromid < toid:
+        if fromid <= toid:
             ev = self.dr.read_sql_one_event(str(fromid))
             if not self.quiet:
                 print("consume FROM:", str(ev[ID])+" ", dt_to_str(ev[TIME]))
@@ -227,3 +233,6 @@ class RunSelf4:
             self.model2.dr = None
             self.model2.other = None
             self.model2 = None
+
+        if self.ioc:
+            self.ioc.close()

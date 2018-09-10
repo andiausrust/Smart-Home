@@ -5,6 +5,7 @@ from cybertrap.database_reader4 import DatabaseReader4
 from cybertrap.dbconst import *
 from cybertrap.filter import Filter
 from cybertrap.row4 import row2dict
+from ioc_client.ioc_client import IocClient
 
 from r4.cmdtemplate import CommandTemplate
 from r4.model_cmp4b import ModelCmp4b
@@ -49,6 +50,8 @@ class CmdSelf(CommandTemplate):
 # not fully implemented yet
 #        parser.add_argument("-network",  dest='innetwork', action='store_true', required=False, help="do network events !EXPERIMENTAL!")
 
+        parser.add_argument("-rmq", metavar=('url'), dest='inurl', required=False, help="a url for RMQ link, e.g: amqp://user:password@localhost:5672")
+
         parser.set_defaults(cls=CmdSelf)
 
 
@@ -73,6 +76,7 @@ class CmdSelf(CommandTemplate):
     def run(self, indb=None, inref=None,
             ininter=None, infrom=None,
             innetwork=False, infileop=False, inallfiles=False, inprocessonly=False,
+            inurl = None,
             quiet=False,
             **kwargs):
 
@@ -80,6 +84,13 @@ class CmdSelf(CommandTemplate):
 #        print(inref)
 #        print(ininter)
 #        print(infrom)
+#        print(inurl)
+
+        ioc = None
+        if inurl:
+            if not quiet:
+                print("using RMQ at", inurl)
+            ioc = IocClient(inurl)
 
         if len(inref) % 2 ==1: print("error: invalid ref range, not even number of arguments?"); exit(1)
 
@@ -88,7 +99,8 @@ class CmdSelf(CommandTemplate):
 
         fromevent = infrom
 
-        s = RunSelf4(db, host, quiet, innetwork, infileop, inallfiles, inprocessonly)
+        s = RunSelf4(db, host, quiet, ioc,
+                     innetwork, infileop, inallfiles, inprocessonly)
 
         if type(fromevent) is not int:
 
