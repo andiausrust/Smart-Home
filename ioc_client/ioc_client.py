@@ -6,6 +6,7 @@ import pika
 import ioc_client.pb_ioc_detection_service_pb2 as ioc
 from ioc_client.pb_rpc_pb2 import RPCall
 
+
 class IocClient:
     def __init__(self, url=None):
         print("IOC|RMQ_init:",url)
@@ -21,7 +22,6 @@ class IocClient:
     # setup RMQ connection at start of interval
     def open(self):
         print("IOC|RMQ_open")
-        return None   # FIXME/REMOVEME
 
         self.connection = pika.BlockingConnection(pika.URLParameters(self.url))
         self.channel = self.connection.channel()
@@ -37,7 +37,6 @@ class IocClient:
     # close/free RMQ connection on end of interval because pause is coming
     def close(self):
         print("IOC|RMQ_close")
-        return None   # FIXME/REMOVEME
 
         self.channel.stop_consuming()
         self.connection.close()
@@ -49,24 +48,32 @@ class IocClient:
             print(props.headers)
             self.response = props
 
-
-    def create_mark_ioc_msg(self, event_id, comment="Cogitated", async=False):
+    def create_mark_ioc_msg(self, iocdata, async=False):
         msg = ioc.MarkIOCRequest()
-        msg.comment = comment
-        msg.eventIds.append(event_id)
+
+        for proc in iocdata:
+            print("PROC:", proc[0], proc[1])   # eventid, comment
+            proc_alert = msg.alerts.add()
+            proc_alert.processEventId = int(proc[0])
+            proc_alert.comment = proc[1]
+
+            for file in iocdata[proc]:
+                print("     ", file[0], file[1])   # eventid, comment
+                file_event_alert = proc_alert.fileEventAlert.add()
+                file_event_alert.fileEventIds = int(file[0])
+                file_event_alert.comment = file[1]
+
         msg.async = async
         return msg
 
-    def create_req(self, event_id, comment):
+    def create_req(self, iocdata):
         request = RPCall()
         request.method = 'markIOC'
-        request.parameters = self.create_mark_ioc_msg(event_id=event_id, comment=comment).SerializeToString()
+        request.parameters = self.create_mark_ioc_msg(iocdata).SerializeToString()
         return request
 
     # called from model to mark a specific event
-    def mark_ioc(self, event_id: str, comment: str):
-        print("IOC|RMQ_mark_ioc: ",event_id, comment)
-        return None   # FIXME/REMOVEME
+    def mark_ioc(self, iocdata: dict):
 
         self.corr_id = str(uuid.uuid4())
         self.channel.basic_publish(exchange='e.rpc',
@@ -76,7 +83,7 @@ class IocClient:
                                                                        'Accepted-Content-Type': 'application/x-protobuf'},
                                                               reply_to=self.callback_queue,
                                                               correlation_id=self.corr_id),
-                              body=self.create_req(event_id, comment).SerializeToString())
-        # Wait for response until timeout (FIXME: actually waits forever)
+                              body=self.create_req(iocdata).SerializeToString())
+        # Wait for response until timeout
         while self.response is None and time.time() < (10.0 + time.time()):
             self.connection.process_data_events()
