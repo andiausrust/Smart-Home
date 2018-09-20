@@ -5,6 +5,7 @@ from cybertrap.database import Database
 from cybertrap.database_reader4 import DatabaseReader4
 
 import time
+import re
 import datetime as dt
 from pprint import pprint
 from copy import deepcopy
@@ -33,6 +34,8 @@ class RunSelf4:
         self.host = host
         self.quiet = quiet
         self.ioc = ioc
+        if self.ioc:
+            ioc.runself = self
 
         self.reinit()
                                      # hostid    name   colors    dr
@@ -41,6 +44,7 @@ class RunSelf4:
 #        self.model2 = ModelCmp4b( str(host), str(db), [14,36],  self.dr, quiet=True, fromreboot=False)
         self.model1 = None
         self.model2 = None
+        self.reffile = None
 
     def reinit(self):
         self.db = RunSelf4._get_database_(self.dburl, self.quiet)
@@ -73,6 +77,8 @@ class RunSelf4:
         self.model2.dr = self.dr
         if self.ioc:
             self.model2.ioc = self.ioc
+
+        self.model2.force_late_same_to_var_promotion()
 
 
     def read_sql_one_event_and_convert(self, eventid:str) -> dict:
@@ -138,7 +144,11 @@ class RunSelf4:
             resprox = self.dr.read_sql(str(fromid), str(toid))
 
             if self.model2:
+#                print("on-fly consume")
                 self.model2.ranges_consumed.append( [fromid, toid] )
+#            else:
+#                print("ref model consume")
+
 
             events_total = int(resprox.rowcount)
 
@@ -163,7 +173,7 @@ class RunSelf4:
 
             return events_processed
         else:
-            print("BUG? consume_events:", fromid, " is not <", toid, "? - doing nothing")
+            print("BUG? consume_events:", fromid, " is not <=", toid, "? - ignoring request")
             return 0
 
 
@@ -178,6 +188,69 @@ class RunSelf4:
             else:
                 toid = ranges.pop(0)
                 self.consume_events(fromid,    toid     )
+
+
+    def add_refline_to_file(self, event_from, event_to:int, comment:str, filename):
+        with open(filename, "r+") as filehandle:
+            text = filehandle.readlines()
+
+            if text[-1].rstrip() == text[-1]:
+                add = "\n"         # there was no ending \n
+            else:
+                add = ""           # there was a \n, no need to add anything
+
+            if event_from == event_to:
+                filehandle.write(add+"{}   {}\n".format(event_from, comment))
+            else:
+                filehandle.write(add+"{} {}   {}\n".format(event_from, event_to, comment) )
+
+
+    def learn_more_refevents(self, event_from, event_to:int, comment:str) -> int:
+        if not self.model2:
+            if self.modelref.dr == None:     # model needs dr for lookups
+                self.modelref.dr = self.dr
+
+            events_consumed = self.consume_events(event_from, event_to)
+
+            if events_consumed>0:
+                self.add_refline_to_file(event_from, event_to, comment, self.reffile)
+            else:
+                print("BUG! provided range "+str(event_from)+"-"+str(event_to)+" did not consume any events=")
+
+            return events_consumed
+
+        else:
+            print("WRONG USE! learning references "+str(event_from)+"-"+str(event_to)+" while models in active use")
+            return 0
+
+
+    # learn reference events/ranges from an input file
+    def consume_reffile(self, filename:str):
+        FROMTO = re.compile(r'^ *(\d+) +(\d+)')
+        SINGLE = re.compile(r'^ *(\d+)')
+
+        with open(filename) as filehandle:
+            for line in filehandle:
+                i = line.find('#')
+                if i!=-1: line = line[0:i]    # delete everything right of #
+                if len(line)<2: continue      # line still with content?
+
+                mat = FROMTO.search(line)       # EVENTID EVENTID
+                if mat:
+                    event_from = mat.group(1)
+                    event_to   = mat.group(2)
+#                    print("***", int(event_from), int(event_to)),
+                    self.consume_events(event_from, event_to)
+                else:
+                    mat = SINGLE.search(line)   # EVENTID
+                    if mat:
+                        eventid = mat.group(1)
+#                        print("+++", int(eventid), int(eventid))
+                        self.consume_events(event_from, event_to)
+                    else:
+                        print("parse error in line:",line," - ignoring")
+#                print("XXX {}".format(line))
+        self.reffile = filename  # remember for later additions
 
 
     def run_evaluate(self):

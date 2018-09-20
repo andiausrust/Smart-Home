@@ -473,6 +473,32 @@ class ModelCmp4b(ModelTemplate):
         return item
 
 
+    def force_late_same_to_var_promotion(self):
+        if self.other:
+            topromote = []
+
+            # search for same matches in var array
+            for looppair in self.pairs_var:
+                if looppair in self.other.pairs_var:
+                    topromote.append(looppair)
+
+            # promote myself and other match to sameness forever
+            for relation in topromote:
+                item = self.pairs_var.pop(relation)
+                item[EVAL_EVENT] = None
+                item[EVAL_TYPE] = None
+                item[EVAL_STATE] = None
+                self.pairs_same[relation] = item
+
+                item_other = self.other.pairs_var.pop(relation)
+                item_other[EVAL_EVENT] = None
+                item_other[EVAL_TYPE] = None
+                item_other[EVAL_STATE] = None
+                self.other.pairs_same[relation] = item_other
+
+                item[FRIEND]       = item_other
+                item_other[FRIEND] = item
+
 
     def save_pair_dict(self, relation, item, evid, timestamp, gpbinary):
             # insert pair data structure into active sets

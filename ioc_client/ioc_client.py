@@ -16,8 +16,8 @@ class IocClient:
             print("no RMQ url passed in, using the default URL", url)
 
         self.url = url
-        self.model = None   # for callbacks
-
+        self.model = None     # for callbacks
+        self.runself = None   # for reference learning callback
 
     # setup RMQ connection at start of interval
     def open(self):
@@ -40,6 +40,20 @@ class IocClient:
 
         self.channel.stop_consuming()
         self.connection.close()
+
+
+    ### query upstream RMQ queue whether there are pending requests to update the reference model
+    def poll_for_new_references(self):
+
+        ### IMPLEMENT ME ###
+        print("implement me: no reference updates received from RMQ")
+
+        # event_from and event_to MUST EXIST in database!
+        # event_from = 100
+        # event_to = 200
+        # comment = "added from GUI"
+        # if self.runself:
+        #     events_learned = self.runself.learn_more_refevents(event_from, event_to, comment)
 
 
     # Called when rabbitmq delivers rpc response

@@ -1,21 +1,15 @@
 from pprint import pprint
 
-from cybertrap.database import Database
-from cybertrap.database_reader4 import DatabaseReader4
 from cybertrap.dbconst import *
-from cybertrap.filter import Filter
-from cybertrap.row4 import row2dict
 from ioc_client.ioc_client import IocClient
 
 from r4.cmdtemplate import CommandTemplate
 from r4.model_cmp4b import ModelCmp4b
-from r4.modeltemplate import ModelTemplate
-from r4.runsql4 import RunSQL4
 from util.config import Config
 from util.conv import parse_datetimestring_to_dt, dt_to_str
 import time
 import datetime as dt
-from copy import deepcopy
+import os.path
 
 from r4.runself4 import RunSelf4
 
@@ -34,8 +28,11 @@ class CmdSelf(CommandTemplate):
         parser.add_argument("-d", metavar=('str','num'), dest='indb', nargs=2, required=True,
                             help="database alias, hostid")
 
-        parser.add_argument("-ref", metavar=('xxx','xxx'), dest='inref', nargs='+', required=True,
+        parser.add_argument("-ref", metavar=('xxx','xxx'), dest='inref', nargs='+', required=False,
                             help="first, last event")
+
+        parser.add_argument("-reffile", metavar=('filename'), dest='inreffile', nargs=1, required=False,
+                            help="input file for references")
 
         parser.add_argument("-from", metavar=('event'), dest='infrom', required=False, help="force start processing from")
 
@@ -73,18 +70,12 @@ class CmdSelf(CommandTemplate):
 
 
 
-    def run(self, indb=None, inref=None,
+    def run(self, indb=None, inref=None, inreffile=None,
             ininter=None, infrom=None,
             innetwork=False, infileop=False, inallfiles=False, inprocessonly=False,
             inurl = None,
             quiet=False,
             **kwargs):
-
-#        print(indb)
-#        print(inref)
-#        print(ininter)
-#        print(infrom)
-#        print(inurl)
 
         ioc = None
         if inurl:
@@ -92,7 +83,11 @@ class CmdSelf(CommandTemplate):
                 print("using RMQ at", inurl)
             ioc = IocClient(inurl)
 
-        if len(inref) % 2 ==1: print("error: invalid ref range, not even number of arguments?"); exit(1)
+        if not inref and not inreffile:
+            print("error: you need to provide either -ref or -reffile"); exit(1)
+
+        if inref:
+            if len(inref) % 2 ==1: print("error: invalid ref range, not even number of arguments?"); exit(1)
 
         db = indb[0]
         host = indb[1]
@@ -116,7 +111,16 @@ class CmdSelf(CommandTemplate):
         if not quiet:
             print("=== REFERENCE RANGE ===")
 
-        s.consume_events_multi(inref)
+        if inreffile:
+            inreffile = inreffile[0]
+            if os.path.isfile(inreffile):
+                if not quiet:
+                    print("parsing "+inreffile)
+                s.consume_reffile(inreffile)
+
+        if inref:
+            s.consume_events_multi(inref)
+
         s.shutdown_one_run()
 
         while True:
@@ -124,6 +128,9 @@ class CmdSelf(CommandTemplate):
 #            if not quiet:
             print("*** It is now", dt_to_str(now)+" ")  #, end=''
             s.reinit()
+
+            if ioc:   # check for reference updates waiting in RMQ
+                ioc.poll_for_new_references()
 
             if fromevent<int(s.max_event):  # new events in database?
 
