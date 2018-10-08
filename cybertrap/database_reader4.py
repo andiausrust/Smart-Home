@@ -30,7 +30,7 @@ class DatabaseReader4:
         result = self.read_sql_events(event, event)
         result = list(result)
         if len(result)==0:
-            print("Help! got no result back for event", event)
+            print("BUG? got no result back for event", event)
             exit(1)
         return result[0]
 

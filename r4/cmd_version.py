@@ -15,9 +15,9 @@ VERSION = [("IPython",    "IPython"),
            ("bokeh",      "bokeh"),
            ("pika",       "pika"),
            ("protobuf",   "google.protobuf"),
-           ("flask",      "flask"),
-           ("jinja2",     "jinja2"),
            ]
+#           ("flask",      "flask"),
+#           ("jinja2",     "jinja2"),
 
 
 class CmdVersion(CommandTemplate):

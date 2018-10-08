@@ -56,6 +56,14 @@ class CmdRaw(CommandTemplate):
                             action='store_true', required=False,
                             help="apply filtering")
 
+        parser.add_argument("-evid", dest='evid',
+                            action='store_true', required=False,
+                            help="print event id, but no type")
+
+        parser.add_argument("-plot", dest='plot',
+                            action='store_true', required=False,
+                            help="print in plot format")
+
 
         parser.add_argument("-robert", dest='robert',
                             action='store_true', required=False,
@@ -143,7 +151,7 @@ class CmdRaw(CommandTemplate):
 
     def run(self, db=False, inrange=None, inhost=None,
             print_proc=False, print_parent=False, print_cmd=False, print_file=False, print_reg=False,
-            filter=False, quiet=False, robert=None, nopath=False, nochildpath=False, **kwargs):
+            filter=False, evid=False, plot=False, quiet=False, robert=None, nopath=False, nochildpath=False, **kwargs):
         db = Config.get_database(db)
 
         db = Database(db)
@@ -216,13 +224,36 @@ class CmdRaw(CommandTemplate):
                                 print("p"+row[PARENT_PROCESS_NAME])
 
                         elif print_file and row[TYPE_ID] == FILE:
-                            print("F"+row[SRC_FILE_NAME])
+                            if evid:
+                                print(row[ID]+"^"+row[SRC_FILE_NAME])
+                            else:
+                                print("F"+row[SRC_FILE_NAME])
 
                             if row[TYPE] == RENAME:
-                                print("F"+row[DST_FILE_NAME])
+                                if evid:
+                                    print(row[ID]+"^"+row[DST_FILE_NAME])
+                                else:
+                                    print("F"+row[DST_FILE_NAME])
 
                         elif print_reg and row[TYPE_ID] == REGISTRY:
                             print("R"+row[PATH]+'⣿'+row[KEY])
+
+                        elif plot and row[TYPE_ID] == FILE:
+#                            if row[PARENT_PROCESS_NAME] is None:
+#                                row[PARENT_PROCESS_NAME] = "UNKNOWN"
+                            if row[GRANDPARENT_PROCESS_NAME] is None:
+                                row[GRANDPARENT_PROCESS_NAME] = "UNKNOWN"
+
+
+#                            if row[TYPE_ID] != RENAME:
+#                                row[DST_FILE_NAME]
+
+                            print(row[ID]+"°"+row[GRANDPARENT_PROCESS_NAME]+
+                                          "°"+row[PARENT_PROCESS_NAME]+
+                                          "°"+row[SRC_FILE_NAME]+"°"+str(len(row[SRC_FILE_NAME]))+
+                                          "°"+row[DST_FILE_NAME]+"°"+str(len(row[DST_FILE_NAME])) )
+
+
 
                         else:
                             pass

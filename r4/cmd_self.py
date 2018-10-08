@@ -93,7 +93,15 @@ class CmdSelf(CommandTemplate):
         host = indb[1]
 
         fromevent = infrom
+        filelastmodified = None
 
+        if inreffile:
+            inreffile = inreffile[0]
+            if not os.path.isfile(inreffile):
+                print("passed file", inreffile, "is not a file?"); exit(1)
+
+
+        # find the proper from event number
         s = RunSelf4(db, host, quiet, ioc,
                      innetwork, infileop, inallfiles, inprocessonly)
 
@@ -107,27 +115,40 @@ class CmdSelf(CommandTemplate):
 
             fromevent = int(fromevent)
 
-
-        if not quiet:
-            print("=== REFERENCE RANGE ===")
-
-        if inreffile:
-            inreffile = inreffile[0]
-            if os.path.isfile(inreffile):
-                if not quiet:
-                    print("parsing "+inreffile)
-                s.consume_reffile(inreffile)
-
+        # if not an reffile, learn references here, once
         if inref:
+            if not quiet:
+                print("=== REFERENCE RANGE ===")
             s.consume_events_multi(inref)
 
         s.shutdown_one_run()
+
 
         while True:
             now = dt.datetime.now()
 #            if not quiet:
             print("*** It is now", dt_to_str(now)+" ")  #, end=''
-            s.reinit()
+
+            if inreffile:
+                newmodified = os.path.getmtime(inreffile)
+                if filelastmodified != newmodified:
+#                    if not quiet:
+                    if filelastmodified is not None:
+                        print("Reffile seems to have changed -> (re-)parsing... ")
+
+                    s = RunSelf4(db, host, quiet, ioc,
+                                 innetwork, infileop, inallfiles, inprocessonly)
+
+                    if not quiet:
+                        print("=== REFERENCE RANGE ===")
+                    s.consume_reffile(inreffile)
+
+                    filelastmodified = newmodified
+                else:
+                    s.reinit()
+            else:
+                s.reinit()
+
 
             if ioc:   # check for reference updates waiting in RMQ
                 ioc.poll_for_new_references()

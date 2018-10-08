@@ -246,7 +246,7 @@ class RunSelf4:
                     if mat:
                         eventid = mat.group(1)
 #                        print("+++", int(eventid), int(eventid))
-                        self.consume_events(event_from, event_to)
+                        self.consume_events(int(eventid), int(eventid))
                     else:
                         print("parse error in line:",line," - ignoring")
 #                print("XXX {}".format(line))
@@ -291,7 +291,8 @@ class RunSelf4:
                 ev = self.modelref.last_event_consumed
             else:
                 ev = self.model2.last_event_consumed
-            print("== SHUTDOWN, last event consumed was:", str(ev[ID])+" ", str(ev[TIME]) )
+            if ev:
+                print("== SHUTDOWN, last event consumed was:", str(ev[ID])+" ", str(ev[TIME]) )
 
         self.db.shutdown()
         self.db = None

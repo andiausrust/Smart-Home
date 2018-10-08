@@ -62,7 +62,7 @@ class IocClient:
             print(props.headers)
             self.response = props
 
-    def create_mark_ioc_msg(self, iocdata, async=False):
+    def create_mark_ioc_msg(self, iocdata, isasync=False):
         msg = ioc.MarkIOCRequest()
 
         for proc in iocdata:
@@ -77,7 +77,7 @@ class IocClient:
                 file_event_alert.fileEventIds = int(file[0])
                 file_event_alert.comment = file[1]
 
-        msg.async = async
+        msg.async_watcher = isasync
         return msg
 
     def create_req(self, iocdata):
