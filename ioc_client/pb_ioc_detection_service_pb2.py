@@ -12,8 +12,8 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-import pb_dal_pb2 as pb__dal__pb2
-import pb_events_pb2 as pb__events__pb2
+import ioc_client.pb_dal_pb2 as pb__dal__pb2
+import ioc_client.pb_events_pb2 as pb__events__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
