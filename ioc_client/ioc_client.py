@@ -9,7 +9,7 @@ from ioc_client.pb_rpc_pb2 import RPCall
 
 class IocClient:
     def __init__(self, url=None):
-        print("IOC|RMQ_init:",url)
+        print("IOC|RMQ_init:", url)
 
         if url is None:
             url = 'amqp://rabbitmq:password@localhost:5672/'
