@@ -152,3 +152,29 @@ message GetPairsResponse {
 }
 
 // ----------------------------------------------------------------------------
+
+// FalsePositive Brodcast
+message EventMessage {
+    enum Types {
+        PROCESS = 0;
+        THREAD = 1;
+        NETWORK = 2;
+        REGISTRY = 3;
+        FILE = 4;
+        //PROCESS_EXIT = 5;
+    }
+    Types type = 1;
+    bytes event = 2;
+}
+
+message FalsePositiveChange {
+    EventMessage oldEvent = 1;
+    EventMessage newEvent = 2;
+}
+
+
+message FalsePositiveChangeNotice {
+    repeated FalsePositiveChange changedEvents = 1;
+}
+
+

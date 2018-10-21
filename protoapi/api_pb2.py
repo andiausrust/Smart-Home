@@ -20,8 +20,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='api.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\tapi.proto\"\xcf\x02\n\x07Request\x12\x19\n\x07\x63ommand\x18\x01 \x01(\x0e\x32\x08.Message\x12(\n\ngetversion\x18\x02 \x01(\x0b\x32\x12.GetVersionRequestH\x00\x12 \n\x06reinit\x18\x03 \x01(\x0b\x32\x0e.ReinitRequestH\x00\x12\"\n\x07\x63onnect\x18\x04 \x01(\x0b\x32\x0f.ConnectRequestH\x00\x12\"\n\x07\x63onsume\x18\x05 \x01(\x0b\x32\x0f.ConsumeRequestH\x00\x12.\n\rrunevaluation\x18\x06 \x01(\x0b\x32\x15.RunEvaluationRequestH\x00\x12\x38\n\x12getpairstatescount\x18\x07 \x01(\x0b\x32\x1a.GetPairStatesCountRequestH\x00\x12$\n\x08getpairs\x18\x08 \x01(\x0b\x32\x10.GetPairsRequestH\x00\x42\x05\n\x03req\"\xd7\x02\n\x08Response\x12\x19\n\x07\x63ommand\x18\x01 \x01(\x0e\x32\x08.Message\x12)\n\ngetversion\x18\x02 \x01(\x0b\x32\x13.GetVersionResponseH\x00\x12!\n\x06reinit\x18\x03 \x01(\x0b\x32\x0f.ReinitResponseH\x00\x12#\n\x07\x63onnect\x18\x04 \x01(\x0b\x32\x10.ConnectResponseH\x00\x12#\n\x07\x63onsume\x18\x05 \x01(\x0b\x32\x10.ConsumeResponseH\x00\x12/\n\rrunevaluation\x18\x06 \x01(\x0b\x32\x16.RunEvaluationResponseH\x00\x12\x39\n\x12getpairstatescount\x18\x07 \x01(\x0b\x32\x1b.GetPairStatesCountResponseH\x00\x12%\n\x08getpairs\x18\x08 \x01(\x0b\x32\x11.GetPairsResponseH\x00\x42\x05\n\x03res\"!\n\x11GetVersionRequest\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x05\"\"\n\x12GetVersionResponse\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t\"\x0f\n\rReinitRequest\"\x10\n\x0eReinitResponse\"a\n\x0e\x43onnectRequest\x12\r\n\x05model\x18\x01 \x01(\t\x12\x0e\n\x06urldb1\x18\x02 \x01(\t\x12\x0f\n\x07hostid1\x18\x03 \x01(\x05\x12\x0e\n\x06urldb2\x18\x04 \x01(\t\x12\x0f\n\x07hostid2\x18\x05 \x01(\x05\"3\n\x0f\x43onnectResponse\x12\x0f\n\x07\x65vents1\x18\x01 \x01(\x05\x12\x0f\n\x07\x65vents2\x18\x02 \x01(\x05\"H\n\x0e\x43onsumeRequest\x12\r\n\x05\x66rom1\x18\x01 \x01(\x05\x12\x0b\n\x03to1\x18\x02 \x01(\x05\x12\r\n\x05\x66rom2\x18\x03 \x01(\x05\x12\x0b\n\x03to2\x18\x04 \x01(\x05\"3\n\x0f\x43onsumeResponse\x12\x0f\n\x07\x65vents1\x18\x01 \x01(\x05\x12\x0f\n\x07\x65vents2\x18\x02 \x01(\x05\"$\n\x14RunEvaluationRequest\x12\x0c\n\x04host\x18\x01 \x01(\x05\"\x17\n\x15RunEvaluationResponse\")\n\x19GetPairStatesCountRequest\x12\x0c\n\x04host\x18\x01 \x01(\x05\"\x9b\x01\n\x1aGetPairStatesCountResponse\x12\x12\n\nsame_ident\x18\x0b \x01(\x05\x12\x10\n\x08same_sym\x18\x0c \x01(\x05\x12\x11\n\tsame_asym\x18\r \x01(\x05\x12\x11\n\tfuz_ident\x18\x0e \x01(\x05\x12\x0f\n\x07\x66uz_sym\x18\x0f \x01(\x05\x12\x10\n\x08\x66uz_asym\x18\x10 \x01(\x05\x12\x0e\n\x06unique\x18\x11 \x01(\x05\"8\n\x0fGetPairsRequest\x12\x0c\n\x04host\x18\x01 \x01(\x05\x12\x17\n\x04type\x18\x02 \x03(\x0e\x32\t.PAIRTYPE\"\xe6\x01\n\x10GetPairsResponse\x12)\n\x05\x65ntry\x18\x03 \x03(\x0b\x32\x1a.GetPairsResponse.PairInfo\x1a\xa6\x01\n\x08PairInfo\x12\x0f\n\x07\x65ventid\x18\x01 \x01(\x05\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.PAIRTYPE\x12\x16\n\x0etotal_prefixes\x18\x03 \x01(\x05\x12\x17\n\x0funique_prefixes\x18\x04 \x01(\x05\x12\x11\n\thash_dist\x18\x05 \x01(\x05\x12\x0e\n\x06parent\x18\x06 \x01(\t\x12\r\n\x05\x63hild\x18\x07 \x01(\t\x12\r\n\x05\x65xecs\x18\x08 \x01(\x05*x\n\x07Message\x12\x0e\n\nGETVERSION\x10\x00\x12\n\n\x06REINIT\x10\x01\x12\x0b\n\x07\x43ONNECT\x10\x64\x12\x0b\n\x07\x43ONSUME\x10\x65\x12\x11\n\rRUNEVALUATION\x10\x66\x12\x16\n\x12GETPAIRSTATESCOUNT\x10g\x12\x0c\n\x08GETPAIRS\x10h*m\n\x08PAIRTYPE\x12\x0e\n\nSAME_IDENT\x10\x00\x12\x0c\n\x08SAME_SYM\x10\x01\x12\r\n\tSAME_ASYM\x10\x02\x12\r\n\tFUZ_IDENT\x10\x03\x12\x0b\n\x07\x46UZ_SYM\x10\x04\x12\x0c\n\x08\x46UZ_ASYM\x10\x05\x12\n\n\x06UNIQUE\x10\x06\x62\x06proto3')
+  serialized_pb=_b('\n\tapi.proto\"\xcf\x02\n\x07Request\x12\x19\n\x07\x63ommand\x18\x01 \x01(\x0e\x32\x08.Message\x12(\n\ngetversion\x18\x02 \x01(\x0b\x32\x12.GetVersionRequestH\x00\x12 \n\x06reinit\x18\x03 \x01(\x0b\x32\x0e.ReinitRequestH\x00\x12\"\n\x07\x63onnect\x18\x04 \x01(\x0b\x32\x0f.ConnectRequestH\x00\x12\"\n\x07\x63onsume\x18\x05 \x01(\x0b\x32\x0f.ConsumeRequestH\x00\x12.\n\rrunevaluation\x18\x06 \x01(\x0b\x32\x15.RunEvaluationRequestH\x00\x12\x38\n\x12getpairstatescount\x18\x07 \x01(\x0b\x32\x1a.GetPairStatesCountRequestH\x00\x12$\n\x08getpairs\x18\x08 \x01(\x0b\x32\x10.GetPairsRequestH\x00\x42\x05\n\x03req\"\xd7\x02\n\x08Response\x12\x19\n\x07\x63ommand\x18\x01 \x01(\x0e\x32\x08.Message\x12)\n\ngetversion\x18\x02 \x01(\x0b\x32\x13.GetVersionResponseH\x00\x12!\n\x06reinit\x18\x03 \x01(\x0b\x32\x0f.ReinitResponseH\x00\x12#\n\x07\x63onnect\x18\x04 \x01(\x0b\x32\x10.ConnectResponseH\x00\x12#\n\x07\x63onsume\x18\x05 \x01(\x0b\x32\x10.ConsumeResponseH\x00\x12/\n\rrunevaluation\x18\x06 \x01(\x0b\x32\x16.RunEvaluationResponseH\x00\x12\x39\n\x12getpairstatescount\x18\x07 \x01(\x0b\x32\x1b.GetPairStatesCountResponseH\x00\x12%\n\x08getpairs\x18\x08 \x01(\x0b\x32\x11.GetPairsResponseH\x00\x42\x05\n\x03res\"!\n\x11GetVersionRequest\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x05\"\"\n\x12GetVersionResponse\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t\"\x0f\n\rReinitRequest\"\x10\n\x0eReinitResponse\"a\n\x0e\x43onnectRequest\x12\r\n\x05model\x18\x01 \x01(\t\x12\x0e\n\x06urldb1\x18\x02 \x01(\t\x12\x0f\n\x07hostid1\x18\x03 \x01(\x05\x12\x0e\n\x06urldb2\x18\x04 \x01(\t\x12\x0f\n\x07hostid2\x18\x05 \x01(\x05\"3\n\x0f\x43onnectResponse\x12\x0f\n\x07\x65vents1\x18\x01 \x01(\x05\x12\x0f\n\x07\x65vents2\x18\x02 \x01(\x05\"H\n\x0e\x43onsumeRequest\x12\r\n\x05\x66rom1\x18\x01 \x01(\x05\x12\x0b\n\x03to1\x18\x02 \x01(\x05\x12\r\n\x05\x66rom2\x18\x03 \x01(\x05\x12\x0b\n\x03to2\x18\x04 \x01(\x05\"3\n\x0f\x43onsumeResponse\x12\x0f\n\x07\x65vents1\x18\x01 \x01(\x05\x12\x0f\n\x07\x65vents2\x18\x02 \x01(\x05\"$\n\x14RunEvaluationRequest\x12\x0c\n\x04host\x18\x01 \x01(\x05\"\x17\n\x15RunEvaluationResponse\")\n\x19GetPairStatesCountRequest\x12\x0c\n\x04host\x18\x01 \x01(\x05\"\x9b\x01\n\x1aGetPairStatesCountResponse\x12\x12\n\nsame_ident\x18\x0b \x01(\x05\x12\x10\n\x08same_sym\x18\x0c \x01(\x05\x12\x11\n\tsame_asym\x18\r \x01(\x05\x12\x11\n\tfuz_ident\x18\x0e \x01(\x05\x12\x0f\n\x07\x66uz_sym\x18\x0f \x01(\x05\x12\x10\n\x08\x66uz_asym\x18\x10 \x01(\x05\x12\x0e\n\x06unique\x18\x11 \x01(\x05\"8\n\x0fGetPairsRequest\x12\x0c\n\x04host\x18\x01 \x01(\x05\x12\x17\n\x04type\x18\x02 \x03(\x0e\x32\t.PAIRTYPE\"\xe6\x01\n\x10GetPairsResponse\x12)\n\x05\x65ntry\x18\x03 \x03(\x0b\x32\x1a.GetPairsResponse.PairInfo\x1a\xa6\x01\n\x08PairInfo\x12\x0f\n\x07\x65ventid\x18\x01 \x01(\x05\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.PAIRTYPE\x12\x16\n\x0etotal_prefixes\x18\x03 \x01(\x05\x12\x17\n\x0funique_prefixes\x18\x04 \x01(\x05\x12\x11\n\thash_dist\x18\x05 \x01(\x05\x12\x0e\n\x06parent\x18\x06 \x01(\t\x12\r\n\x05\x63hild\x18\x07 \x01(\t\x12\r\n\x05\x65xecs\x18\x08 \x01(\x05\"\x87\x01\n\x0c\x45ventMessage\x12!\n\x04type\x18\x01 \x01(\x0e\x32\x13.EventMessage.Types\x12\r\n\x05\x65vent\x18\x02 \x01(\x0c\"E\n\x05Types\x12\x0b\n\x07PROCESS\x10\x00\x12\n\n\x06THREAD\x10\x01\x12\x0b\n\x07NETWORK\x10\x02\x12\x0c\n\x08REGISTRY\x10\x03\x12\x08\n\x04\x46ILE\x10\x04\"W\n\x13\x46\x61lsePositiveChange\x12\x1f\n\x08oldEvent\x18\x01 \x01(\x0b\x32\r.EventMessage\x12\x1f\n\x08newEvent\x18\x02 \x01(\x0b\x32\r.EventMessage\"H\n\x19\x46\x61lsePositiveChangeNotice\x12+\n\rchangedEvents\x18\x01 \x03(\x0b\x32\x14.FalsePositiveChange*x\n\x07Message\x12\x0e\n\nGETVERSION\x10\x00\x12\n\n\x06REINIT\x10\x01\x12\x0b\n\x07\x43ONNECT\x10\x64\x12\x0b\n\x07\x43ONSUME\x10\x65\x12\x11\n\rRUNEVALUATION\x10\x66\x12\x16\n\x12GETPAIRSTATESCOUNT\x10g\x12\x0c\n\x08GETPAIRS\x10h*m\n\x08PAIRTYPE\x12\x0e\n\nSAME_IDENT\x10\x00\x12\x0c\n\x08SAME_SYM\x10\x01\x12\r\n\tSAME_ASYM\x10\x02\x12\r\n\tFUZ_IDENT\x10\x03\x12\x0b\n\x07\x46UZ_SYM\x10\x04\x12\x0c\n\x08\x46UZ_ASYM\x10\x05\x12\n\n\x06UNIQUE\x10\x06\x62\x06proto3')
 )
+_sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 _MESSAGE = _descriptor.EnumDescriptor(
   name='Message',
@@ -60,8 +61,8 @@ _MESSAGE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=1637,
-  serialized_end=1757,
+  serialized_start=1938,
+  serialized_end=2058,
 )
 _sym_db.RegisterEnumDescriptor(_MESSAGE)
 
@@ -103,8 +104,8 @@ _PAIRTYPE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=1759,
-  serialized_end=1868,
+  serialized_start=2060,
+  serialized_end=2169,
 )
 _sym_db.RegisterEnumDescriptor(_PAIRTYPE)
 
@@ -125,6 +126,40 @@ FUZ_ASYM = 5
 UNIQUE = 6
 
 
+_EVENTMESSAGE_TYPES = _descriptor.EnumDescriptor(
+  name='Types',
+  full_name='EventMessage.Types',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='PROCESS', index=0, number=0,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='THREAD', index=1, number=1,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='NETWORK', index=2, number=2,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='REGISTRY', index=3, number=3,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='FILE', index=4, number=4,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=1704,
+  serialized_end=1773,
+)
+_sym_db.RegisterEnumDescriptor(_EVENTMESSAGE_TYPES)
+
 
 _REQUEST = _descriptor.Descriptor(
   name='Request',
@@ -139,56 +174,56 @@ _REQUEST = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='getversion', full_name='Request.getversion', index=1,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='reinit', full_name='Request.reinit', index=2,
       number=3, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='connect', full_name='Request.connect', index=3,
       number=4, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='consume', full_name='Request.consume', index=4,
       number=5, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='runevaluation', full_name='Request.runevaluation', index=5,
       number=6, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='getpairstatescount', full_name='Request.getpairstatescount', index=6,
       number=7, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='getpairs', full_name='Request.getpairs', index=7,
       number=8, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -222,56 +257,56 @@ _RESPONSE = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='getversion', full_name='Response.getversion', index=1,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='reinit', full_name='Response.reinit', index=2,
       number=3, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='connect', full_name='Response.connect', index=3,
       number=4, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='consume', full_name='Response.consume', index=4,
       number=5, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='runevaluation', full_name='Response.runevaluation', index=5,
       number=6, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='getpairstatescount', full_name='Response.getpairstatescount', index=6,
       number=7, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='getpairs', full_name='Response.getpairs', index=7,
       number=8, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -305,7 +340,7 @@ _GETVERSIONREQUEST = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -336,7 +371,7 @@ _GETVERSIONRESPONSE = _descriptor.Descriptor(
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -415,35 +450,35 @@ _CONNECTREQUEST = _descriptor.Descriptor(
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='urldb1', full_name='ConnectRequest.urldb1', index=1,
       number=2, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='hostid1', full_name='ConnectRequest.hostid1', index=2,
       number=3, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='urldb2', full_name='ConnectRequest.urldb2', index=3,
       number=4, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='hostid2', full_name='ConnectRequest.hostid2', index=4,
       number=5, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -474,14 +509,14 @@ _CONNECTRESPONSE = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='events2', full_name='ConnectResponse.events2', index=1,
       number=2, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -512,28 +547,28 @@ _CONSUMEREQUEST = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='to1', full_name='ConsumeRequest.to1', index=1,
       number=2, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='from2', full_name='ConsumeRequest.from2', index=2,
       number=3, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='to2', full_name='ConsumeRequest.to2', index=3,
       number=4, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -564,14 +599,14 @@ _CONSUMERESPONSE = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='events2', full_name='ConsumeResponse.events2', index=1,
       number=2, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -602,7 +637,7 @@ _RUNEVALUATIONREQUEST = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -657,7 +692,7 @@ _GETPAIRSTATESCOUNTREQUEST = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -688,49 +723,49 @@ _GETPAIRSTATESCOUNTRESPONSE = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='same_sym', full_name='GetPairStatesCountResponse.same_sym', index=1,
       number=12, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='same_asym', full_name='GetPairStatesCountResponse.same_asym', index=2,
       number=13, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='fuz_ident', full_name='GetPairStatesCountResponse.fuz_ident', index=3,
       number=14, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='fuz_sym', full_name='GetPairStatesCountResponse.fuz_sym', index=4,
       number=15, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='fuz_asym', full_name='GetPairStatesCountResponse.fuz_asym', index=5,
       number=16, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='unique', full_name='GetPairStatesCountResponse.unique', index=6,
       number=17, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -761,14 +796,14 @@ _GETPAIRSREQUEST = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='type', full_name='GetPairsRequest.type', index=1,
       number=2, type=14, cpp_type=8, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -799,56 +834,56 @@ _GETPAIRSRESPONSE_PAIRINFO = _descriptor.Descriptor(
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='type', full_name='GetPairsResponse.PairInfo.type', index=1,
       number=2, type=14, cpp_type=8, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='total_prefixes', full_name='GetPairsResponse.PairInfo.total_prefixes', index=2,
       number=3, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='unique_prefixes', full_name='GetPairsResponse.PairInfo.unique_prefixes', index=3,
       number=4, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='hash_dist', full_name='GetPairsResponse.PairInfo.hash_dist', index=4,
       number=5, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='parent', full_name='GetPairsResponse.PairInfo.parent', index=5,
       number=6, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='child', full_name='GetPairsResponse.PairInfo.child', index=6,
       number=7, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
     _descriptor.FieldDescriptor(
       name='execs', full_name='GetPairsResponse.PairInfo.execs', index=7,
       number=8, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -878,7 +913,7 @@ _GETPAIRSRESPONSE = _descriptor.Descriptor(
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
+      options=None),
   ],
   extensions=[
   ],
@@ -893,6 +928,114 @@ _GETPAIRSRESPONSE = _descriptor.Descriptor(
   ],
   serialized_start=1405,
   serialized_end=1635,
+)
+
+
+_EVENTMESSAGE = _descriptor.Descriptor(
+  name='EventMessage',
+  full_name='EventMessage',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='type', full_name='EventMessage.type', index=0,
+      number=1, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='event', full_name='EventMessage.event', index=1,
+      number=2, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+    _EVENTMESSAGE_TYPES,
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1638,
+  serialized_end=1773,
+)
+
+
+_FALSEPOSITIVECHANGE = _descriptor.Descriptor(
+  name='FalsePositiveChange',
+  full_name='FalsePositiveChange',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='oldEvent', full_name='FalsePositiveChange.oldEvent', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='newEvent', full_name='FalsePositiveChange.newEvent', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1775,
+  serialized_end=1862,
+)
+
+
+_FALSEPOSITIVECHANGENOTICE = _descriptor.Descriptor(
+  name='FalsePositiveChangeNotice',
+  full_name='FalsePositiveChangeNotice',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='changedEvents', full_name='FalsePositiveChangeNotice.changedEvents', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1864,
+  serialized_end=1936,
 )
 
 _REQUEST.fields_by_name['command'].enum_type = _MESSAGE
@@ -957,6 +1100,11 @@ _GETPAIRSREQUEST.fields_by_name['type'].enum_type = _PAIRTYPE
 _GETPAIRSRESPONSE_PAIRINFO.fields_by_name['type'].enum_type = _PAIRTYPE
 _GETPAIRSRESPONSE_PAIRINFO.containing_type = _GETPAIRSRESPONSE
 _GETPAIRSRESPONSE.fields_by_name['entry'].message_type = _GETPAIRSRESPONSE_PAIRINFO
+_EVENTMESSAGE.fields_by_name['type'].enum_type = _EVENTMESSAGE_TYPES
+_EVENTMESSAGE_TYPES.containing_type = _EVENTMESSAGE
+_FALSEPOSITIVECHANGE.fields_by_name['oldEvent'].message_type = _EVENTMESSAGE
+_FALSEPOSITIVECHANGE.fields_by_name['newEvent'].message_type = _EVENTMESSAGE
+_FALSEPOSITIVECHANGENOTICE.fields_by_name['changedEvents'].message_type = _FALSEPOSITIVECHANGE
 DESCRIPTOR.message_types_by_name['Request'] = _REQUEST
 DESCRIPTOR.message_types_by_name['Response'] = _RESPONSE
 DESCRIPTOR.message_types_by_name['GetVersionRequest'] = _GETVERSIONREQUEST
@@ -973,9 +1121,11 @@ DESCRIPTOR.message_types_by_name['GetPairStatesCountRequest'] = _GETPAIRSTATESCO
 DESCRIPTOR.message_types_by_name['GetPairStatesCountResponse'] = _GETPAIRSTATESCOUNTRESPONSE
 DESCRIPTOR.message_types_by_name['GetPairsRequest'] = _GETPAIRSREQUEST
 DESCRIPTOR.message_types_by_name['GetPairsResponse'] = _GETPAIRSRESPONSE
+DESCRIPTOR.message_types_by_name['EventMessage'] = _EVENTMESSAGE
+DESCRIPTOR.message_types_by_name['FalsePositiveChange'] = _FALSEPOSITIVECHANGE
+DESCRIPTOR.message_types_by_name['FalsePositiveChangeNotice'] = _FALSEPOSITIVECHANGENOTICE
 DESCRIPTOR.enum_types_by_name['Message'] = _MESSAGE
 DESCRIPTOR.enum_types_by_name['PAIRTYPE'] = _PAIRTYPE
-_sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 Request = _reflection.GeneratedProtocolMessageType('Request', (_message.Message,), dict(
   DESCRIPTOR = _REQUEST,
@@ -1096,6 +1246,27 @@ GetPairsResponse = _reflection.GeneratedProtocolMessageType('GetPairsResponse', 
   ))
 _sym_db.RegisterMessage(GetPairsResponse)
 _sym_db.RegisterMessage(GetPairsResponse.PairInfo)
+
+EventMessage = _reflection.GeneratedProtocolMessageType('EventMessage', (_message.Message,), dict(
+  DESCRIPTOR = _EVENTMESSAGE,
+  __module__ = 'api_pb2'
+  # @@protoc_insertion_point(class_scope:EventMessage)
+  ))
+_sym_db.RegisterMessage(EventMessage)
+
+FalsePositiveChange = _reflection.GeneratedProtocolMessageType('FalsePositiveChange', (_message.Message,), dict(
+  DESCRIPTOR = _FALSEPOSITIVECHANGE,
+  __module__ = 'api_pb2'
+  # @@protoc_insertion_point(class_scope:FalsePositiveChange)
+  ))
+_sym_db.RegisterMessage(FalsePositiveChange)
+
+FalsePositiveChangeNotice = _reflection.GeneratedProtocolMessageType('FalsePositiveChangeNotice', (_message.Message,), dict(
+  DESCRIPTOR = _FALSEPOSITIVECHANGENOTICE,
+  __module__ = 'api_pb2'
+  # @@protoc_insertion_point(class_scope:FalsePositiveChangeNotice)
+  ))
+_sym_db.RegisterMessage(FalsePositiveChangeNotice)
 
 
 # @@protoc_insertion_point(module_scope)
